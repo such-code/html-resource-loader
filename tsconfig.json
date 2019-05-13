@@ -1,0 +1,29 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "outDir": "./dist/lib",
+    "sourceMap": true,
+    "declaration": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "es6",
+    "typeRoots": [],
+    "baseUrl": "./src/lib",
+    "paths": {
+      "~local": [ "./src/lib" ]
+    },
+    "lib": [
+      "es2017",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "include": [
+    "src/lib/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
