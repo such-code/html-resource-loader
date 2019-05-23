@@ -1,75 +1,71 @@
 import * as loaderUtils from 'loader-utils';
-import {DomElement, DomHandler, Parser} from 'htmlparser2';
+import {DomElement} from 'htmlparser2';
 import * as webpack from "webpack";
 import {RawSourceMap} from "source-map";
 import {DomRenderer} from "./renderer";
 import {Executor} from "./executor";
-import {NormalizedRule, normalizeRuleObjects} from "./rules";
 import * as path from "path";
+import {stringToDom} from "./utils";
+import {MutationRule, rulesFactory} from "./rules";
 
 type ContextOptions = {
     executor: Executor,
     context: string,
 }
 
-function processAttribute($name: string, $value: string, $options: ContextOptions): Promise<{ [key: string]: any }> {
-    const isAbsoluteUrl = /^\w*:\/\//.test($value);
-    if (!isAbsoluteUrl) {
-        const isAbsolutePath = /^\//.test($value);
-        if (!isAbsolutePath) {
-            return $options.executor
-                .resolveAndExecute(
-                    $options.context,
-                    './' + path.relative(
+function applyRule(
+    $node: DomElement,
+    $rule: MutationRule,
+    $options: ContextOptions
+): Promise<DomElement | Array<DomElement>> {
+    if ($rule.test($node)) {
+        debugger;
+        const requiredPath = $rule.extract($node);
+        const isAbsoluteUrl = /^\w*:\/\//.test(requiredPath);
+        if (!isAbsoluteUrl) {
+            const isAbsolutePath = /^\//.test(requiredPath);
+            if (!isAbsolutePath) {
+                return $options.executor
+                    .resolveAndExecute(
                         $options.context,
-                        path.join($options.context, $value)
+                        './' + path.relative($options.context, path.join($options.context, requiredPath))
                     )
-                )
-                .then($ => ({
-                    [$name]: $,
-                }));
-        }
-    }
-    return Promise.resolve({ [$name]: $value });
-}
-
-function applyRule($node: DomElement, $rule: NormalizedRule, $options: ContextOptions): Promise<DomElement> {
-    if ($node.type === 'tag' && 'attribs' in $node) {
-        const tagMatches = $rule.tag.findIndex($tagPattern => $tagPattern.test($node.name)) > -1;
-        if (tagMatches) {
-            const attributesToHandle = Object.keys($node.attribs)
-                .filter($attr => {
-                    return $rule.attr.findIndex($attrPattern => $attrPattern.test($attr)) > -1
-                });
-
-            if (attributesToHandle.length > 0) {
-                return Promise.all(
-                    attributesToHandle.map(
-                        $attr => processAttribute($attr, $node.attribs[$attr], $options)
-                    )
-                ).then(
-                    $proceedAttributes => {
-                        $node.attribs = {
-                            ...$node.attribs,
-                            ...$proceedAttributes.reduce(($acc, $currentValue) => ({
-                                ...$acc,
-                                ...$currentValue,
-                            }), {})
-                        };
-                        return $node;
-                    }
-                );
+                    .then($ => {
+                        if (typeof $ !== 'string') {
+                            throw Error('Resolved module content must be string.');
+                        }
+                        return $rule.apply($node, $);
+                    })
             }
         }
     }
     return Promise.resolve($node);
 }
 
-function applyRules($node: DomElement, $rules: Array<NormalizedRule>, $options: ContextOptions): Promise<DomElement> {
+function applyRules(
+    $node: DomElement,
+    $rules: Array<MutationRule>,
+    $options: ContextOptions
+): Promise<DomElement | Array<DomElement>> {
     const rulesToApply = $rules.concat();
-    const constructNextHandler = ($resultNode: DomElement) => {
+    const constructNextHandler = ($resultNode: DomElement | Array<DomElement>) => {
         if (rulesToApply.length > 0) {
-            return applyRule($resultNode, rulesToApply.shift(), $options)
+            const ruleToApply = rulesToApply.shift();
+
+            if (Array.isArray($resultNode)) {
+                return Promise
+                    .all($resultNode.map($ => {
+                        return applyRule($, ruleToApply, $options);
+                    }))
+                    .then(($: Array<DomElement | Array<DomElement>>): Array<DomElement> => {
+                        // Structure should be flattened.
+                        return $.reduce<Array<DomElement>>(($acc: Array<DomElement>, $current) => {
+                            return $acc.concat($current);
+                        }, [])
+                    })
+                    .then(constructNextHandler);
+            }
+            return applyRule($resultNode, ruleToApply, $options)
                 // Promise recursion
                 .then(constructNextHandler);
         }
@@ -81,30 +77,41 @@ function applyRules($node: DomElement, $rules: Array<NormalizedRule>, $options: 
         .then(constructNextHandler);
 }
 
-function processNode($node: DomElement, $rules: Array<NormalizedRule>, $options: ContextOptions): Promise<DomElement> {
+function processNode(
+    $node: DomElement,
+    $rules: Array<MutationRule>,
+    $options: ContextOptions
+): Promise<DomElement | Array<DomElement>> {
     return applyRules($node, $rules, $options)
-            .then($checkedNode => {
-                // If required process child nodes.
-                if (Array.isArray($node.children) && $node.children.length > 0) {
-                    return processNodes($node.children, $rules, $options)
-                        .then($processedChildren => {
-                            $node.children = $processedChildren;
-                            return $node;
-                        })
-                }
-
-                return $checkedNode;
-            });
+        .then($mutated => {
+            if (
+                !Array.isArray($mutated)
+                && ($mutated === $node || $mutated.children === $node.children)
+                && Array.isArray($mutated.children) && $mutated.children.length > 0
+            ) {
+                return processNodes($mutated.children, $rules, $options)
+                    .then($processedChildren => {
+                        $mutated.children = $processedChildren;
+                        return $mutated;
+                    });
+            }
+            return $mutated;
+        });
 }
 
 function processNodes(
     $nodes: Array<DomElement>,
-    $rules: Array<NormalizedRule>,
+    $rules: Array<MutationRule>,
     $options: ContextOptions
 ): Promise<Array<DomElement>> {
-    return Promise.all(
-        $nodes.map($ => processNode($, $rules, $options))
-    );
+    return Promise
+        .all(
+            $nodes.map($ => processNode($, $rules, $options))
+        ).then(($: Array<DomElement | Array<DomElement>>): Array<DomElement> => {
+            return $.reduce<Array<DomElement>>(($acc: Array<DomElement>, $current) => {
+                return $acc.concat($current);
+            }, []);
+        });
 }
 
 const htmlResourceLoader: webpack.loader.Loader = function htmlResourceLoaderFn(
@@ -129,7 +136,7 @@ const htmlResourceLoader: webpack.loader.Loader = function htmlResourceLoaderFn(
         }
 
         // Normalize provided rules.
-        const rules: Array<NormalizedRule> = normalizeRuleObjects(options.rules);
+        const rules: Array<MutationRule> = rulesFactory(options.rules);
 
         // Become async.
         const callbackFn = this.async();
@@ -145,34 +152,24 @@ const htmlResourceLoader: webpack.loader.Loader = function htmlResourceLoaderFn(
             );
 
         // Parsing DOM
-        const parser = new Parser(
-            new DomHandler(($error: any, $domElements: Array<DomElement>) => {
-                if ($error) {
-                    callbackFn($error);
-                } else {
-                    const contextOptions: ContextOptions = {
-                        context: this.context,
-                        executor: new Executor(publicPath, this.loadModule, this.resolve),
-                    };
-
-                    processNodes($domElements, rules, contextOptions)
-                        .then(($processedDomElements: Array<DomElement>) => {
-                            const renderer = new DomRenderer();
-                            // FIXME: Also share meta data!
-                            callbackFn(null, renderer.renderElements($processedDomElements));
-                        })
-                        .catch($error => {
-                            callbackFn($error);
-                        });
-                }
-            }),
-            {
-                lowerCaseTags: false,
-                lowerCaseAttributeNames: false
-            }
-        );
         // This could be improved using this.inputValue and this.value. Not sure if this works in webpack v3.
-        parser.parseComplete($source);
+        stringToDom($source)
+            .then(($domElements) => {
+                const contextOptions: ContextOptions = {
+                    context: this.context,
+                    executor: new Executor(publicPath, this.loadModule, this.resolve),
+                };
+
+                return processNodes($domElements, rules, contextOptions);
+            })
+            .then(($processedDomElements: Array<DomElement>) => {
+                const renderer = new DomRenderer();
+                // FIXME: Also share meta data!
+                callbackFn(null, renderer.renderElements($processedDomElements));
+            })
+            .catch($error => {
+                callbackFn($error);
+            });
     }
     return $source;
 };

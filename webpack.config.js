@@ -2,6 +2,34 @@ const path = require('path');
 
 const publicPath = '/';
 
+const resourceLoaderRules = [
+    {
+        selector: [ { tag: 'img' }, { attr: 'src' } ],
+        source: { attr: 'src' },
+        target: { attr: 'src' }
+    },
+    {
+        selector: [ { tag: 'ng-include' }, { attr: 'src' } ],
+        source: { attr: 'src' },
+        target: { tag: 'replace' },
+    },
+    {
+        selector: [ { attr: 'ng-include' }, { attr: 'data-append', exclude: true }, { attr: 'data-prepend', exclude: true } ],
+        source: { attr: 'ng-include', remove: true, },
+        target: { content: 'replace' },
+    },
+    {
+        selector: [ { attr: 'ng-include' }, { attr: 'data-append' } ],
+        source: { attr: 'ng-include', remove: true, },
+        target: { content: 'append' },
+    },
+    {
+        selector: [ { attr: 'ng-include' }, { attr: 'data-prepend' } ],
+        source: { attr: 'ng-include', remove: true, },
+        target: { content: 'prepend' },
+    },
+];
+
 module.exports = {
     entry: './index.html',
     context: path.resolve(__dirname, 'src/test'),
@@ -17,7 +45,21 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.html?$/i,
+                test: /\.htm$/i,
+                use: [
+                    {
+                        loader: 'raw-loader',
+                    },
+                    {
+                        loader: 'html-resource-loader',
+                        options: {
+                            rules: resourceLoaderRules
+                        }
+                    }
+                ],
+            },
+            {
+                test: /\.html$/i,
                 use: [
                     {
                         loader: 'file-loader',
@@ -28,13 +70,7 @@ module.exports = {
                     {
                         loader: 'html-resource-loader',
                         options: {
-                            rules: [
-                                {
-                                    tag: 'img',
-                                    attr: /^src$/i
-                                }
-                            ]
-                        }
+                            rules: resourceLoaderRules                        }
                     }
                 ],
             },

@@ -1,37 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const loaderUtils = require("loader-utils");
-const htmlparser2_1 = require("htmlparser2");
 const renderer_1 = require("./renderer");
 const executor_1 = require("./executor");
-const rules_1 = require("./rules");
 const path = require("path");
-function processAttribute($name, $value, $options) {
-    const isAbsoluteUrl = /^\w*:\/\//.test($value);
-    if (!isAbsoluteUrl) {
-        const isAbsolutePath = /^\//.test($value);
-        if (!isAbsolutePath) {
-            return $options.executor
-                .resolveAndExecute($options.context, './' + path.relative($options.context, path.join($options.context, $value)))
-                .then($ => ({
-                [$name]: $,
-            }));
-        }
-    }
-    return Promise.resolve({ [$name]: $value });
-}
+const utils_1 = require("./utils");
+const rules_1 = require("./rules");
 function applyRule($node, $rule, $options) {
-    if ($node.type === 'tag' && 'attribs' in $node) {
-        const tagMatches = $rule.tag.findIndex($tagPattern => $tagPattern.test($node.name)) > -1;
-        if (tagMatches) {
-            const attributesToHandle = Object.keys($node.attribs)
-                .filter($attr => {
-                return $rule.attr.findIndex($attrPattern => $attrPattern.test($attr)) > -1;
-            });
-            if (attributesToHandle.length > 0) {
-                return Promise.all(attributesToHandle.map($attr => processAttribute($attr, $node.attribs[$attr], $options))).then($proceedAttributes => {
-                    $node.attribs = Object.assign({}, $node.attribs, $proceedAttributes.reduce(($acc, $currentValue) => (Object.assign({}, $acc, $currentValue)), {}));
-                    return $node;
+    if ($rule.test($node)) {
+        debugger;
+        const requiredPath = $rule.extract($node);
+        const isAbsoluteUrl = /^\w*:\/\//.test(requiredPath);
+        if (!isAbsoluteUrl) {
+            const isAbsolutePath = /^\//.test(requiredPath);
+            if (!isAbsolutePath) {
+                return $options.executor
+                    .resolveAndExecute($options.context, './' + path.relative($options.context, path.join($options.context, requiredPath)))
+                    .then($ => {
+                    if (typeof $ !== 'string') {
+                        throw Error('Resolved module content must be string.');
+                    }
+                    return $rule.apply($node, $);
                 });
             }
         }
@@ -42,7 +31,21 @@ function applyRules($node, $rules, $options) {
     const rulesToApply = $rules.concat();
     const constructNextHandler = ($resultNode) => {
         if (rulesToApply.length > 0) {
-            return applyRule($resultNode, rulesToApply.shift(), $options)
+            const ruleToApply = rulesToApply.shift();
+            if (Array.isArray($resultNode)) {
+                return Promise
+                    .all($resultNode.map($ => {
+                    return applyRule($, ruleToApply, $options);
+                }))
+                    .then(($) => {
+                    // Structure should be flattened.
+                    return $.reduce(($acc, $current) => {
+                        return $acc.concat($current);
+                    }, []);
+                })
+                    .then(constructNextHandler);
+            }
+            return applyRule($resultNode, ruleToApply, $options)
                 // Promise recursion
                 .then(constructNextHandler);
         }
@@ -54,20 +57,26 @@ function applyRules($node, $rules, $options) {
 }
 function processNode($node, $rules, $options) {
     return applyRules($node, $rules, $options)
-        .then($checkedNode => {
-        // If required process child nodes.
-        if (Array.isArray($node.children) && $node.children.length > 0) {
-            return processNodes($node.children, $rules, $options)
+        .then($mutated => {
+        if (!Array.isArray($mutated)
+            && ($mutated === $node || $mutated.children === $node.children)
+            && Array.isArray($mutated.children) && $mutated.children.length > 0) {
+            return processNodes($mutated.children, $rules, $options)
                 .then($processedChildren => {
-                $node.children = $processedChildren;
-                return $node;
+                $mutated.children = $processedChildren;
+                return $mutated;
             });
         }
-        return $checkedNode;
+        return $mutated;
     });
 }
 function processNodes($nodes, $rules, $options) {
-    return Promise.all($nodes.map($ => processNode($, $rules, $options)));
+    return Promise
+        .all($nodes.map($ => processNode($, $rules, $options))).then(($) => {
+        return $.reduce(($acc, $current) => {
+            return $acc.concat($current);
+        }, []);
+    });
 }
 const htmlResourceLoader = function htmlResourceLoaderFn($source, $sourceMap, 
 // FIXME: Add meta handling in case it contains already modified HTML Ast!!!
@@ -86,7 +95,7 @@ $meta) {
             $source = $source.toString();
         }
         // Normalize provided rules.
-        const rules = rules_1.normalizeRuleObjects(options.rules);
+        const rules = rules_1.rulesFactory(options.rules);
         // Become async.
         const callbackFn = this.async();
         // Determine public path
@@ -98,31 +107,23 @@ $meta) {
                 ? this._compilation.outputOptions.publicPath
                 : '');
         // Parsing DOM
-        const parser = new htmlparser2_1.Parser(new htmlparser2_1.DomHandler(($error, $domElements) => {
-            if ($error) {
-                callbackFn($error);
-            }
-            else {
-                const contextOptions = {
-                    context: this.context,
-                    executor: new executor_1.Executor(publicPath, this.loadModule, this.resolve),
-                };
-                processNodes($domElements, rules, contextOptions)
-                    .then(($processedDomElements) => {
-                    const renderer = new renderer_1.DomRenderer();
-                    // FIXME: Also share meta data!
-                    callbackFn(null, renderer.renderElements($processedDomElements));
-                })
-                    .catch($error => {
-                    callbackFn($error);
-                });
-            }
-        }), {
-            lowerCaseTags: false,
-            lowerCaseAttributeNames: false
-        });
         // This could be improved using this.inputValue and this.value. Not sure if this works in webpack v3.
-        parser.parseComplete($source);
+        utils_1.stringToDom($source)
+            .then(($domElements) => {
+            const contextOptions = {
+                context: this.context,
+                executor: new executor_1.Executor(publicPath, this.loadModule, this.resolve),
+            };
+            return processNodes($domElements, rules, contextOptions);
+        })
+            .then(($processedDomElements) => {
+            const renderer = new renderer_1.DomRenderer();
+            // FIXME: Also share meta data!
+            callbackFn(null, renderer.renderElements($processedDomElements));
+        })
+            .catch($error => {
+            callbackFn($error);
+        });
     }
     return $source;
 };
