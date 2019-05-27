@@ -82,18 +82,26 @@ class MutationRuleTagSelector extends MutationRuleSelector {
 }
 exports.MutationRuleTagSelector = MutationRuleTagSelector;
 class MutationRuleAttrSelector extends MutationRuleSelector {
+    static commonFilter($) {
+        return true;
+    }
     constructor($rule) {
         super(typeof $rule.exclude === 'boolean' ? $rule.exclude : false);
         this.attr = typeof $rule.attr === 'string'
             ? utils_1.stringToRegExp($rule.attr)
             : $rule.attr;
+        this.filter = typeof $rule.filter === 'function'
+            ? $rule.filter
+            : MutationRuleAttrSelector.commonFilter;
     }
     test($element) {
         const result = $element.type === 'tag'
             && typeof $element.attribs === 'object'
             && Object
                 .keys($element.attribs)
-                .findIndex($ => this.attr.test($)) > -1;
+                .findIndex($ => {
+                return this.attr.test($) && this.filter($element.attribs[$]);
+            }) > -1;
         return this.negotiate ? !result : result;
     }
 }

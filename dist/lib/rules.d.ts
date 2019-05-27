@@ -8,6 +8,7 @@ export declare type TagRuleSelector = {
 export declare function isTagRuleSelector($value: any): $value is TagRuleSelector;
 export declare type AttrRuleSelector = {
     attr: string | RegExp;
+    filter?: ($: string) => boolean;
 } & RuleSelectorBase;
 export declare function isAttrRuleSelector($value: any): $value is AttrRuleSelector;
 export declare type RuleSelector = TagRuleSelector | AttrRuleSelector;
@@ -54,7 +55,9 @@ export declare class MutationRuleTagSelector extends MutationRuleSelector {
     test($element: DomElement): boolean;
 }
 export declare class MutationRuleAttrSelector extends MutationRuleSelector {
+    protected static commonFilter($: string): boolean;
     protected readonly attr: RegExp;
+    protected readonly filter: ($: string) => boolean;
     constructor($rule: AttrRuleSelector);
     test($element: DomElement): boolean;
 }

@@ -21,6 +21,7 @@ export function isTagRuleSelector($value: any): $value is TagRuleSelector {
 
 export type AttrRuleSelector = {
     attr: string | RegExp,
+    filter?: ($: string) => boolean,
 } & RuleSelectorBase
 
 export function isAttrRuleSelector($value: any): $value is AttrRuleSelector {
@@ -149,13 +150,22 @@ export class MutationRuleTagSelector extends MutationRuleSelector {
 }
 
 export class MutationRuleAttrSelector extends MutationRuleSelector {
+    protected static commonFilter($: string): boolean {
+        return true;
+    }
+
     protected readonly attr: RegExp;
+    protected readonly filter: ($: string) => boolean;
 
     public constructor($rule: AttrRuleSelector) {
         super(typeof $rule.exclude === 'boolean' ? $rule.exclude : false);
         this.attr = typeof $rule.attr === 'string'
             ? stringToRegExp($rule.attr)
             : $rule.attr;
+
+        this.filter = typeof $rule.filter === 'function'
+            ? $rule.filter
+            : MutationRuleAttrSelector.commonFilter;
     }
 
     public test($element: DomElement): boolean {
@@ -163,7 +173,9 @@ export class MutationRuleAttrSelector extends MutationRuleSelector {
             && typeof $element.attribs === 'object'
             && Object
                 .keys($element.attribs)
-                .findIndex($ => this.attr.test($)) > -1;
+                .findIndex($ => {
+                    return this.attr.test($) && this.filter($element.attribs[$]);
+                }) > -1;
 
         return this.negotiate ? !result : result;
     }

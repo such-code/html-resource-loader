@@ -3,6 +3,9 @@ const path = require('path');
 const publicPath = '/';
 
 const quoteTest = /^(['"])(.+(?!\1).)\1$/;
+function stringFilter($) {
+    return quoteTest.test($);
+}
 function resourceDeserializer($) {
     if (/^(['"])(.+(?!\1)).\1$/.test($)) {
         return $.replace(quoteTest, '$2');
@@ -16,7 +19,7 @@ const resourceLoaderRules = [
         target: { attr: 'src' }
     },
     {
-        selector: [ { tag: 'ng-include' }, { attr: 'src' } ],
+        selector: [ { tag: 'ng-include' }, { attr: 'src', filter: stringFilter } ],
         source: { attr: 'src' },
         target: { tag: 'replace' },
     },
