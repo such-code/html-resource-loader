@@ -12,15 +12,19 @@ export declare type AttrRuleSelector = {
 export declare function isAttrRuleSelector($value: any): $value is AttrRuleSelector;
 export declare type RuleSelector = TagRuleSelector | AttrRuleSelector;
 export declare function isRuleSelector($value: any): $value is RuleSelector;
+export declare type RuleSourceBase = {
+    deserialize?: ($: string) => string;
+};
 export declare type AttrRuleSource = {
     attr: string | RegExp;
     remove?: boolean;
-};
+} & RuleSourceBase;
 export declare function isAttrRuleSource($value: any): $value is AttrRuleSource;
 export declare type RuleSource = AttrRuleSource;
 export declare function isRuleSource($value: any): $value is RuleSource;
 export declare type AttrRuleTarget = {
     attr: string;
+    serialize?: ($: string) => string;
 };
 export declare function isAttrRuleTarget($value: any): $value is AttrRuleTarget;
 export declare type TagRuleTarget = {
@@ -61,7 +65,9 @@ export declare abstract class MutationRuleSource {
     abstract clean($element: DomElement): DomElement;
 }
 export declare class MutationRuleAttrSource extends MutationRuleSource {
+    protected static commonDeserializer($value: string): string;
     protected readonly attr: RegExp;
+    protected readonly deserialize: ($: string) => string;
     constructor($source: AttrRuleSource);
     protected extractAttribute($element: DomElement): string;
     extract($element: DomElement): string;
@@ -81,7 +87,9 @@ export declare class MutationTagRule extends MutationRule {
     apply($element: DomElement, $data: string): Promise<DomElement | Array<DomElement>>;
 }
 export declare class MutationAttrRule extends MutationRule {
+    protected static commonSerializer($value: string): string;
     protected readonly attr: string;
+    protected readonly serialize: ($value: string) => string;
     constructor($selectors: Array<MutationRuleSelector>, $source: MutationRuleSource, $target: AttrRuleTarget);
     apply($element: DomElement, $data: string): Promise<DomElement>;
 }

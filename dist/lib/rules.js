@@ -106,17 +106,23 @@ class MutationRuleSource {
 }
 exports.MutationRuleSource = MutationRuleSource;
 class MutationRuleAttrSource extends MutationRuleSource {
+    static commonDeserializer($value) {
+        return $value;
+    }
     constructor($source) {
         super(typeof $source.remove === 'boolean' ? $source.remove : false);
         this.attr = typeof $source.attr === 'string'
             ? utils_1.stringToRegExp($source.attr)
             : $source.attr;
+        this.deserialize = typeof $source.deserialize === 'function'
+            ? $source.deserialize
+            : MutationRuleAttrSource.commonDeserializer;
     }
     extractAttribute($element) {
         return Object.keys($element.attribs).find($ => this.attr.test($));
     }
     extract($element) {
-        return $element.attribs[this.extractAttribute($element)];
+        return this.deserialize($element.attribs[this.extractAttribute($element)]);
     }
     clean($element) {
         const attr = this.extractAttribute($element);
@@ -166,9 +172,15 @@ class MutationTagRule extends MutationRule {
 }
 exports.MutationTagRule = MutationTagRule;
 class MutationAttrRule extends MutationRule {
+    static commonSerializer($value) {
+        return $value;
+    }
     constructor($selectors, $source, $target) {
         super($selectors, $source);
         this.attr = $target.attr;
+        this.serialize = typeof $target.serialize === 'function'
+            ? $target.serialize
+            : MutationAttrRule.commonSerializer;
     }
     apply($element, $data) {
         if (this.source.discard) {

@@ -2,6 +2,13 @@ const path = require('path');
 
 const publicPath = '/';
 
+const quoteTest = /^(['"])(.+(?!\1).)\1$/;
+function resourceDeserializer($) {
+    if (/^(['"])(.+(?!\1)).\1$/.test($)) {
+        return $.replace(quoteTest, '$2');
+    }
+}
+
 const resourceLoaderRules = [
     {
         selector: [ { tag: 'img' }, { attr: 'src' } ],
@@ -15,17 +22,17 @@ const resourceLoaderRules = [
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-append', exclude: true }, { attr: 'data-prepend', exclude: true } ],
-        source: { attr: 'ng-include', remove: true, },
+        source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'replace' },
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-append' } ],
-        source: { attr: 'ng-include', remove: true, },
+        source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'append' },
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-prepend' } ],
-        source: { attr: 'ng-include', remove: true, },
+        source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'prepend' },
     },
 ];

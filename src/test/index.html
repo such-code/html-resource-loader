@@ -11,13 +11,13 @@
     <h3>Content below is replaced by source content</h3>
     <ng-include src="./part.htm"></ng-include>
     <h3>This div will have content inserted into it, ng-include tag should be deleted!</h3>
-    <div ng-include="./part.htm"></div>
+    <div ng-include="'./part.htm'"></div>
     <h3>Save as previous, but source content will be appended.</h3>
-    <div ng-include="./part.htm" data-append>
+    <div ng-include="'./part.htm'" data-append>
         <h5>Content should be below this heading</h5>
     </div>
     <h3>Save as previous, but source content will be prepended.</h3>
-    <div ng-include="./part.htm" data-prepend>
+    <div ng-include="'./part.htm'" data-prepend>
         <h5>Content should be above this heading</h5>
     </div>
 </body>

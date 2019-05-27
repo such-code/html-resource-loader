@@ -41,10 +41,14 @@ export function isRuleSelector($value: any): $value is RuleSelector {
 
 // ------------------------------------------------------------------------------------------------------------------ //
 
+export type RuleSourceBase = {
+    deserialize?: ($: string) => string,
+}
+
 export type AttrRuleSource = {
     attr: string | RegExp,
     remove?: boolean
-}
+} & RuleSourceBase;
 
 export function isAttrRuleSource($value: any): $value is AttrRuleSource {
     return typeof $value === 'object'
@@ -65,6 +69,7 @@ export function isRuleSource($value: any): $value is RuleSource {
 
 export type AttrRuleTarget = {
     attr: string,
+    serialize?: ($: string) => string,
 }
 
 export function isAttrRuleTarget($value: any): $value is AttrRuleTarget {
@@ -175,13 +180,21 @@ export abstract class MutationRuleSource {
 }
 
 export class MutationRuleAttrSource extends MutationRuleSource {
+    protected static commonDeserializer($value: string): string {
+        return $value;
+    }
+
     protected readonly attr: RegExp;
+    protected readonly deserialize: ($: string) => string;
 
     constructor($source: AttrRuleSource) {
         super(typeof $source.remove === 'boolean' ? $source.remove : false);
         this.attr = typeof $source.attr === 'string'
             ? stringToRegExp($source.attr)
             : $source.attr;
+        this.deserialize = typeof $source.deserialize === 'function'
+            ? $source.deserialize
+            : MutationRuleAttrSource.commonDeserializer;
     }
 
     protected extractAttribute($element: DomElement): string {
@@ -189,7 +202,9 @@ export class MutationRuleAttrSource extends MutationRuleSource {
     }
 
     public extract($element: DomElement): string {
-        return $element.attribs[this.extractAttribute($element)];
+        return this.deserialize(
+            $element.attribs[this.extractAttribute($element)]
+        );
     }
 
     public clean($element: DomElement): DomElement {
@@ -254,7 +269,12 @@ export class MutationTagRule extends MutationRule {
 }
 
 export class MutationAttrRule extends MutationRule {
+    protected static commonSerializer($value: string): string {
+        return $value;
+    }
+
     protected readonly attr: string;
+    protected readonly serialize: ($value: string) => string;
 
     public constructor(
         $selectors: Array<MutationRuleSelector>,
@@ -263,6 +283,9 @@ export class MutationAttrRule extends MutationRule {
     ) {
         super($selectors, $source);
         this.attr = $target.attr;
+        this.serialize = typeof $target.serialize === 'function'
+            ? $target.serialize
+            : MutationAttrRule.commonSerializer;
     }
 
     public apply($element: DomElement, $data: string): Promise<DomElement> {
