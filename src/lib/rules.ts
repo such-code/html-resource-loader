@@ -307,7 +307,7 @@ export class MutationAttrRule extends MutationRule {
 
         $element.attribs = {
             ...$element.attribs,
-            [this.attr]: $data,
+            [this.attr]: this.serialize($data),
         };
         return Promise.resolve($element);
     }

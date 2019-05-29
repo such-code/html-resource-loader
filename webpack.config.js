@@ -12,6 +12,10 @@ function resourceDeserializer($) {
     }
 }
 
+function resourceSerializer($) {
+    return `'${/'/.test($) ? $.replace(/'/g, '\\\'') : $}'`
+}
+
 const resourceLoaderRules = [
     {
         selector: [ { tag: 'img' }, { attr: 'src' } ],
@@ -24,9 +28,14 @@ const resourceLoaderRules = [
         target: { tag: 'replace' },
     },
     {
-        selector: [ { attr: 'ng-include' }, { attr: 'data-append', exclude: true }, { attr: 'data-prepend', exclude: true } ],
+        selector: [ { attr: 'ng-include' }, { attr: 'data-append', exclude: true }, { attr: 'data-prepend', exclude: true }, { attr: 'data-attr', exclude: true }, ],
         source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'replace' },
+    },
+    {
+        selector: [ { attr: 'ng-include' }, { attr: 'data-attr' } ],
+        source: { attr: 'ng-include', deserialize: resourceDeserializer },
+        target: { attr: 'ng-include', serialize: resourceSerializer },
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-append' } ],

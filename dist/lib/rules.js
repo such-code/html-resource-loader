@@ -194,7 +194,7 @@ class MutationAttrRule extends MutationRule {
         if (this.source.discard) {
             $element = this.source.clean($element);
         }
-        $element.attribs = Object.assign({}, $element.attribs, { [this.attr]: $data });
+        $element.attribs = Object.assign({}, $element.attribs, { [this.attr]: this.serialize($data) });
         return Promise.resolve($element);
     }
 }
