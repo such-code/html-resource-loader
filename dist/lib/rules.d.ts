@@ -19,6 +19,7 @@ export declare type RuleSourceBase = {
 export declare type AttrRuleSource = {
     attr: string | RegExp;
     remove?: boolean;
+    deserialize?: ($: string) => string;
 } & RuleSourceBase;
 export declare function isAttrRuleSource($value: any): $value is AttrRuleSource;
 export declare type RuleSource = AttrRuleSource;

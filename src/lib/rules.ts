@@ -48,7 +48,9 @@ export type RuleSourceBase = {
 
 export type AttrRuleSource = {
     attr: string | RegExp,
-    remove?: boolean
+    remove?: boolean,
+    // Custom deserialization function,
+    deserialize?: ($: string) => string,
 } & RuleSourceBase;
 
 export function isAttrRuleSource($value: any): $value is AttrRuleSource {
