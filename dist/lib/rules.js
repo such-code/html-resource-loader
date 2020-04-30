@@ -82,9 +82,6 @@ class MutationRuleTagSelector extends MutationRuleSelector {
 }
 exports.MutationRuleTagSelector = MutationRuleTagSelector;
 class MutationRuleAttrSelector extends MutationRuleSelector {
-    static commonFilter($) {
-        return true;
-    }
     constructor($rule) {
         super(typeof $rule.exclude === 'boolean' ? $rule.exclude : false);
         this.attr = typeof $rule.attr === 'string'
@@ -93,6 +90,9 @@ class MutationRuleAttrSelector extends MutationRuleSelector {
         this.filter = typeof $rule.filter === 'function'
             ? $rule.filter
             : MutationRuleAttrSelector.commonFilter;
+    }
+    static commonFilter($) {
+        return true;
     }
     test($element) {
         const result = $element.type === 'tag'
@@ -114,9 +114,6 @@ class MutationRuleSource {
 }
 exports.MutationRuleSource = MutationRuleSource;
 class MutationRuleAttrSource extends MutationRuleSource {
-    static commonDeserializer($value) {
-        return $value;
-    }
     constructor($source) {
         super(typeof $source.remove === 'boolean' ? $source.remove : false);
         this.attr = typeof $source.attr === 'string'
@@ -125,6 +122,9 @@ class MutationRuleAttrSource extends MutationRuleSource {
         this.deserialize = typeof $source.deserialize === 'function'
             ? $source.deserialize
             : MutationRuleAttrSource.commonDeserializer;
+    }
+    static commonDeserializer($value) {
+        return $value;
     }
     extractAttribute($element) {
         return Object.keys($element.attribs).find($ => this.attr.test($));
@@ -180,9 +180,6 @@ class MutationTagRule extends MutationRule {
 }
 exports.MutationTagRule = MutationTagRule;
 class MutationAttrRule extends MutationRule {
-    static commonSerializer($value) {
-        return $value;
-    }
     constructor($selectors, $source, $target) {
         super($selectors, $source);
         this.attr = $target.attr;
@@ -190,11 +187,14 @@ class MutationAttrRule extends MutationRule {
             ? $target.serialize
             : MutationAttrRule.commonSerializer;
     }
+    static commonSerializer($value) {
+        return $value;
+    }
     apply($element, $data) {
         if (this.source.discard) {
             $element = this.source.clean($element);
         }
-        $element.attribs = Object.assign({}, $element.attribs, { [this.attr]: this.serialize($data) });
+        $element.attribs = Object.assign(Object.assign({}, $element.attribs), { [this.attr]: this.serialize($data, $element.attribs[this.attr]) });
         return Promise.resolve($element);
     }
 }

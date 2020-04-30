@@ -19,7 +19,6 @@ function applyRule(
     $options: ContextOptions
 ): Promise<DomElement | Array<DomElement>> {
     if ($rule.test($node)) {
-        debugger;
         const requiredPath = $rule.extract($node);
         const isAbsoluteUrl = /^\w*:\/\//.test(requiredPath);
         if (!isAbsoluteUrl) {

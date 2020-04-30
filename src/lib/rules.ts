@@ -49,8 +49,6 @@ export type RuleSourceBase = {
 export type AttrRuleSource = {
     attr: string | RegExp,
     remove?: boolean,
-    // Custom deserialization function,
-    deserialize?: ($: string) => string,
 } & RuleSourceBase;
 
 export function isAttrRuleSource($value: any): $value is AttrRuleSource {
@@ -72,7 +70,7 @@ export function isRuleSource($value: any): $value is RuleSource {
 
 export type AttrRuleTarget = {
     attr: string,
-    serialize?: ($: string) => string,
+    serialize?: ($: string, $prev?: string) => string,
 }
 
 export function isAttrRuleTarget($value: any): $value is AttrRuleTarget {
@@ -288,7 +286,7 @@ export class MutationAttrRule extends MutationRule {
     }
 
     protected readonly attr: string;
-    protected readonly serialize: ($value: string) => string;
+    protected readonly serialize: ($value: string, $previous?: string) => string;
 
     public constructor(
         $selectors: Array<MutationRuleSelector>,
@@ -309,7 +307,7 @@ export class MutationAttrRule extends MutationRule {
 
         $element.attribs = {
             ...$element.attribs,
-            [this.attr]: this.serialize($data),
+            [this.attr]: this.serialize($data, $element.attribs[this.attr]),
         };
         return Promise.resolve($element);
     }

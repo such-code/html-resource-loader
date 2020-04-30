@@ -50,7 +50,7 @@ class Executor {
         });
     }
 }
+exports.Executor = Executor;
 Executor._currentId = 1;
 Executor.executionCache = {};
-exports.Executor = Executor;
 //# sourceMappingURL=executor.js.map

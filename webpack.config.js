@@ -16,6 +16,65 @@ function resourceSerializer($) {
     return `'${/'/.test($) ? $.replace(/'/g, '\\\'') : $}'`
 }
 
+function extractStyleAsObject($style) {
+    return $style
+        .split(';')
+        .reduce(($acc, $expr) => {
+            let [style, value] = $expr.split(':', 2);
+            return {
+                ...$acc,
+                [style.trim()]: value.trim(),
+            };
+        }, {});
+}
+
+function renderStyleObject($style) {
+    return Object
+        .keys($style)
+        .map($ => {
+            return `${$}:${$style[$]}`;
+        })
+        .join(';')
+}
+
+const URL_REGEX = /^url\(("|'|)((?:.(?!\1\)))*.)\1\)$/;
+
+function extractFromUrl($) {
+    if (URL_REGEX.test($)) {
+        return $.replace(URL_REGEX, '$2');
+    }
+    return $;
+}
+
+function buildStyleUrlRule($styleName) {
+    return {
+        selector: [
+            {
+                attr: 'style',
+                filter: $ => {
+                    const style = extractStyleAsObject($);
+                    return $styleName in style;
+                }
+            }
+        ],
+        source: {
+            attr: 'style',
+            deserialize: $ => {
+                const style = extractStyleAsObject($);
+                return extractFromUrl(style[$styleName]);
+            }
+        },
+        target: {
+            attr: 'style',
+            serialize: ($url, $) => {
+                const style = extractStyleAsObject($);
+                style[$styleName] = `url(${$url})`;
+                return renderStyleObject(style);
+            }
+        }
+    };
+}
+
 const resourceLoaderRules = [
     {
         selector: [ { tag: 'img' }, { attr: 'src' } ],
@@ -47,6 +106,8 @@ const resourceLoaderRules = [
         source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'prepend' },
     },
+    buildStyleUrlRule('background-image'),
+    buildStyleUrlRule('--custom-var'),
 ];
 
 module.exports = {

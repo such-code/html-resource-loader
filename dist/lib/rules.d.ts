@@ -19,14 +19,13 @@ export declare type RuleSourceBase = {
 export declare type AttrRuleSource = {
     attr: string | RegExp;
     remove?: boolean;
-    deserialize?: ($: string) => string;
 } & RuleSourceBase;
 export declare function isAttrRuleSource($value: any): $value is AttrRuleSource;
 export declare type RuleSource = AttrRuleSource;
 export declare function isRuleSource($value: any): $value is RuleSource;
 export declare type AttrRuleTarget = {
     attr: string;
-    serialize?: ($: string) => string;
+    serialize?: ($: string, $prev?: string) => string;
 };
 export declare function isAttrRuleTarget($value: any): $value is AttrRuleTarget;
 export declare type TagRuleTarget = {
@@ -93,7 +92,7 @@ export declare class MutationTagRule extends MutationRule {
 export declare class MutationAttrRule extends MutationRule {
     protected static commonSerializer($value: string): string;
     protected readonly attr: string;
-    protected readonly serialize: ($value: string) => string;
+    protected readonly serialize: ($value: string, $previous?: string) => string;
     constructor($selectors: Array<MutationRuleSelector>, $source: MutationRuleSource, $target: AttrRuleTarget);
     apply($element: DomElement, $data: string): Promise<DomElement>;
 }

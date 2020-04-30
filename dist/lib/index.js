@@ -8,7 +8,6 @@ const utils_1 = require("./utils");
 const rules_1 = require("./rules");
 function applyRule($node, $rule, $options) {
     if ($rule.test($node)) {
-        debugger;
         const requiredPath = $rule.extract($node);
         const isAbsoluteUrl = /^\w*:\/\//.test(requiredPath);
         if (!isAbsoluteUrl) {
