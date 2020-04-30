@@ -1,6 +1,6 @@
 {
   "name": "html-resource-loader",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Loads resources from HTML using rules.",
   "main": "dist/lib/index.js",
   "private": true,
