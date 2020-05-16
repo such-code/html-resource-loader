@@ -1,20 +1,44 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const html_parser_utils_1 = require("@such-code/html-parser-utils");
+const lib_1 = require("domhandler/lib");
 const loaderUtils = require("loader-utils");
-const renderer_1 = require("./renderer");
-const executor_1 = require("./executor");
-const path = require("path");
+const rules_internal_1 = require("./rules-internal");
 const utils_1 = require("./utils");
-const rules_1 = require("./rules");
 function applyRule($node, $rule, $options) {
-    if ($rule.test($node)) {
+    // Only elements are processed.
+    if (html_parser_utils_1.isElement($node) && $rule.test($node)) {
         const requiredPath = $rule.extract($node);
-        const isAbsoluteUrl = /^\w*:\/\//.test(requiredPath);
+        const isAbsoluteUrl = /^([a-z]+:)?\/\//i.test(requiredPath);
         if (!isAbsoluteUrl) {
             const isAbsolutePath = /^\//.test(requiredPath);
             if (!isAbsolutePath) {
-                return $options.executor
-                    .resolveAndExecute($options.context, './' + path.relative($options.context, path.join($options.context, requiredPath)))
+                return Promise.resolve()
+                    .then(() => {
+                    if ($rule.hasResolver) {
+                        return $rule.resolve($options.context, requiredPath);
+                    }
+                    return $options.resolver
+                        .resolve($options.context, requiredPath)
+                        .catch($err => {
+                        // Retry to force relative path resolution.
+                        if (!/^\.{1,2}\//.test(requiredPath)) {
+                            return $options.resolver
+                                .resolve($options.context, './' + requiredPath)
+                                .catch(() => {
+                                throw $err;
+                            });
+                        }
+                        throw $err;
+                    });
+                })
+                    .then($ => $options.loader.load($))
+                    .then($ => {
+                    return $options.executor
+                        .evaluateCode($options.context, $.source, 
+                    // Module type definitions are incorrect.
+                    $.module['resource'] + '.js');
+                })
                     .then($ => {
                     if (typeof $ !== 'string') {
                         throw Error('Resolved module content must be string.');
@@ -56,13 +80,18 @@ function applyRules($node, $rules, $options) {
 }
 function processNode($node, $rules, $options) {
     return applyRules($node, $rules, $options)
-        .then($mutated => {
-        if (!Array.isArray($mutated)
-            && ($mutated === $node || $mutated.children === $node.children)
-            && Array.isArray($mutated.children) && $mutated.children.length > 0) {
-            return processNodes($mutated.children, $rules, $options)
+        .then(($mutated) => {
+        if (html_parser_utils_1.isNodeWithChildren($node)
+            // if $mutated is an array - then it is already processed (tag was replaced with different content)
+            && !Array.isArray($mutated)
+            && $mutated instanceof lib_1.NodeWithChildren
+            // process children only if they are same
+            && ($mutated === $node || $mutated.childNodes === $node.childNodes)
+            && Array.isArray($mutated.childNodes)
+            && $mutated.childNodes.length > 0) {
+            return processNodes($mutated.childNodes, $rules, $options)
                 .then($processedChildren => {
-                $mutated.children = $processedChildren;
+                $mutated.childNodes = $processedChildren;
                 return $mutated;
             });
         }
@@ -71,60 +100,56 @@ function processNode($node, $rules, $options) {
 }
 function processNodes($nodes, $rules, $options) {
     return Promise
-        .all($nodes.map($ => processNode($, $rules, $options))).then(($) => {
+        .all($nodes.map($ => processNode($, $rules, $options)))
+        .then(($) => {
         return $.reduce(($acc, $current) => {
             return $acc.concat($current);
         }, []);
     });
 }
-const htmlResourceLoader = function htmlResourceLoaderFn($source, $sourceMap, 
+module.exports = function htmlResourceLoaderFn($source, $sourceMap, 
 // FIXME: Add meta handling in case it contains already modified HTML Ast!!!
 $meta) {
     const options = loaderUtils.getOptions(this);
-    if (!('rules' in options)) {
-        this.emitWarning(Error('Rules should be configured form html resource loader to take effect.'));
-        return $source;
-    }
-    else if (!Array.isArray(options.rules)) {
-        this.emitError(Error('Loader rules must be an array of objects.'));
-        return undefined;
-    }
-    if (typeof $source === 'string' || $source instanceof Buffer) {
-        if ($source instanceof Buffer) {
-            $source = $source.toString();
+    if (utils_1.isHtmlResourceLoaderOptions(options)) {
+        if (typeof $source === 'string') {
+            // Normalize provided rules.
+            const rules = rules_internal_1.convertToMutationRules(options.rules);
+            // Become async.
+            const callbackFn = this.async();
+            // Determine public path (is required to execute loaded module)
+            const publicPath = 'publicPath' in options
+                ? (typeof options.publicPath === 'function' ? options.publicPath(this.context) : options.publicPath)
+                : (
+                // This solution is based on deprecated methods but it is the only option to get public path.
+                this._compilation && this._compilation.outputOptions && 'publicPath' in this._compilation.outputOptions
+                    ? this._compilation.outputOptions.publicPath
+                    : '');
+            // Check is $meta already has parsed AST.
+            const dom = utils_1.isArrayOfNodes($meta) ? Promise.resolve($meta) : html_parser_utils_1.stringToDom($source);
+            // Process AST
+            dom
+                .then(($domElements) => {
+                const contextOptions = {
+                    context: this.context,
+                    loader: new utils_1.WebpackLoader(this.loadModule),
+                    resolver: new utils_1.WebpackResolver(this.resolve),
+                    executor: new utils_1.CodeExecutor(publicPath),
+                };
+                return processNodes($domElements, rules, contextOptions);
+            })
+                .then(($processedDomElements) => {
+                const renderer = new html_parser_utils_1.DomRenderer();
+                callbackFn(null, renderer.renderNodes($processedDomElements), $sourceMap, $processedDomElements);
+            })
+                .catch($error => {
+                callbackFn($error);
+            });
         }
-        // Normalize provided rules.
-        const rules = rules_1.rulesFactory(options.rules);
-        // Become async.
-        const callbackFn = this.async();
-        // Determine public path
-        const publicPath = 'publicPath' in options
-            ? (typeof options.publicPath === 'function' ? options.publicPath(this.context) : options.publicPath)
-            : (
-            // This solution is based on deprecated methods but it is the only option to get public path.
-            this._compilation && this._compilation.outputOptions && 'publicPath' in this._compilation.outputOptions
-                ? this._compilation.outputOptions.publicPath
-                : '');
-        // Parsing DOM
-        // This could be improved using this.inputValue and this.value. Not sure if this works in webpack v3.
-        utils_1.stringToDom($source)
-            .then(($domElements) => {
-            const contextOptions = {
-                context: this.context,
-                executor: new executor_1.Executor(publicPath, this.loadModule, this.resolve),
-            };
-            return processNodes($domElements, rules, contextOptions);
-        })
-            .then(($processedDomElements) => {
-            const renderer = new renderer_1.DomRenderer();
-            // FIXME: Also share meta data!
-            callbackFn(null, renderer.renderElements($processedDomElements));
-        })
-            .catch($error => {
-            callbackFn($error);
-        });
+    }
+    else {
+        // TODO: Check what exactly is wrong.
+        this.emitError(Error('Loader options are configured incorrectly.'));
     }
     return $source;
 };
-module.exports = htmlResourceLoader;
-//# sourceMappingURL=index.js.map

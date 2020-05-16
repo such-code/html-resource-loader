@@ -83,18 +83,13 @@ const resourceLoaderRules = [
     },
     {
         selector: [ { tag: 'ng-include' }, { attr: 'src', filter: stringFilter } ],
-        source: { attr: 'src' },
+        source: { attr: 'src', deserialize: resourceDeserializer },
         target: { tag: 'replace' },
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-append', exclude: true }, { attr: 'data-prepend', exclude: true }, { attr: 'data-attr', exclude: true }, ],
         source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'replace' },
-    },
-    {
-        selector: [ { attr: 'ng-include' }, { attr: 'data-attr' } ],
-        source: { attr: 'ng-include', deserialize: resourceDeserializer },
-        target: { attr: 'ng-include', serialize: resourceSerializer },
     },
     {
         selector: [ { attr: 'ng-include' }, { attr: 'data-append' } ],
@@ -106,8 +101,27 @@ const resourceLoaderRules = [
         source: { attr: 'ng-include', remove: true, deserialize: resourceDeserializer },
         target: { content: 'prepend' },
     },
+    {
+        selector: [ { attr: 'ng-include' }, { attr: 'data-attr' } ],
+        source: { attr: 'ng-include', deserialize: resourceDeserializer, remove: true, },
+        target: { attr: 'data-attr' },
+    },
     buildStyleUrlRule('background-image'),
-    buildStyleUrlRule('--custom-var'),
+    buildStyleUrlRule('--md-background-image'),
+    {
+        selector: [ { tag: 'svg' }, { attr: 'data-src' }],
+        source: { attr: 'data-src', },
+        target: {
+            tag: 'replace',
+            serialize: ($, $prev) => {
+                if (Array.isArray($)) {
+                    throw Error('Something went wrong, should be only one node.');
+                }
+                $.attribs.class = $.attribs.class + ' ' + $prev.attribs.class;
+                return $;
+            },
+        }
+    }
 ];
 
 module.exports = {
@@ -125,10 +139,14 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.htm$/i,
+                test: /\.html?$/i,
+                issuer: {
+                    test: /\.html?$/i,
+                },
                 use: [
                     {
                         loader: 'raw-loader',
+                        options: { esModule: false, },
                     },
                     {
                         loader: 'html-resource-loader',
@@ -139,7 +157,8 @@ module.exports = {
                 ],
             },
             {
-                test: /\.html$/i,
+                test: /\.html?$/i,
+                include: /index\.html$/i,
                 use: [
                     {
                         loader: 'file-loader',
@@ -150,12 +169,16 @@ module.exports = {
                     {
                         loader: 'html-resource-loader',
                         options: {
-                            rules: resourceLoaderRules                        }
+                            rules: resourceLoaderRules
+                        }
                     }
                 ],
             },
             {
-                test: /\.(eot|svg|cur)$/i,
+                test: /\.(svg|png|gif)$/i,
+                exclude: [
+                    path.resolve(__dirname, 'src/test/file-code.svg'),
+                ],
                 use: [
                     {
                         loader: 'file-loader',
@@ -167,17 +190,17 @@ module.exports = {
                 ]
             },
             {
-                test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|ani)$/i,
+                test: /\.svg$/i,
+                include: [
+                    path.resolve(__dirname, 'src/test/file-code.svg'),
+                ],
                 use: [
                     {
-                        loader: 'url-loader',
-                        options: {
-                            name: 'images/[path][name].[ext]',
-                            limit: 1000
-                        }
+                        loader: 'raw-loader',
+                        options: { esModule: false, }
                     }
-                ],
-            },
+                ]
+            }
         ]
     },
     plugins: [

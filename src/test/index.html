@@ -1,33 +1,116 @@
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <title>EWS</title>
+    <meta charset="utf-8">
+    <title>html-resource-loader</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <style type="text/css">
+        svg, img[src$=svg] {
+            width: 2em;
+            height: 2em;
+        }
+
+        ng-include[src="some.var"]:after {
+            color: var(--success);
+            content: 'And it is!';
+        }
+
+        [data-attr]:not([ng-include]):after {
+            color: var(--success);
+            content: attr(data-attr);
+        }
+
+        .style-test {
+            border: 1px solid green;
+        }
+
+        @media (min-width: 768px) {
+            .style-test {
+                border-color: var(--pink);
+            }
+
+            [style*="--md-background-image"] {
+                background-image: var(--md-background-image) !important;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>This is test page</h1>
-    <p>Image below should be displayed correctly.</p>
-    <img src="./doge.gif">
-    <h3>Content below is replaced by source content</h3>
-    <ng-include src="./part.htm"></ng-include>
-    <h3>This div will have content inserted into it, ng-include tag should be deleted!</h3>
-    <div ng-include="'./part.htm'"></div>
-    <h3>Save as previous, but source content will be appended.</h3>
-    <div ng-include="'./part.htm'" data-append>
-        <h5>Content should be below this heading</h5>
+<div class="container">
+    <h1 class="mb-3 mb-md-5">Test page</h1>
+    <div class="media mb-4">
+        <img class="mr-3" src="./card.svg">
+        <div class="media-body">
+            <h5 class="mt-0">img[src]</h5>
+            Test is passed if image is displayed correctly.
+        </div>
     </div>
-    <h3>Save as previous, but source content will be prepended.</h3>
-    <div ng-include="'./part.htm'" data-prepend>
-        <h5>Content should be above this heading</h5>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">ng-include[src]</h5>
+            Result:
+            <ng-include src="'./is-working.html'"></ng-include>
+        </div>
     </div>
-    <h3>Attr data should be replaced with a correct one.</h3>
-    <div ng-include="'./doge.gif'" data-attr>
-        :)
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">[ng-include]</h5>
+            <div class="border border-success p-2" ng-include="'./part.html'">
+                It's not working correctly :(
+            </div>
+            <small class="text-muted">Content must in bordered container.</small>
+        </div>
     </div>
-    <h3>This content should be skipped.</h3>
-    <ng-include src="some.var"></ng-include>
-
-    <h3>This div will have processed several times style attribute.</h3>
-    <div style="background-image: url(doge.gif); --custom-var: url(forest.gif)"></div>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">[ng-include][data-append]</h5>
+            <div class="border border-success p-2" ng-include="'./part.html'" data-append>
+                <p class="text-muted">&darr; Inserted content must be below.</p>
+            </div>
+        </div>
+    </div>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">[ng-include][data-prepend]</h5>
+            <div class="border border-success p-2" ng-include="'./part.html'" data-prepend>
+                <p class="text-muted">&uarr; Inserted content must be above.</p>
+            </div>
+        </div>
+    </div>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">[ng-include][data-attr]</h5>
+            <p>
+                Image source is:
+                <span class="font-bold" ng-include="'./card.svg'" data-attr></span>
+            </p>
+        </div>
+    </div>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">ng-include[src] - filtered out</h5>
+            <p>
+                This content should be skipped.
+                <ng-include src="some.var"></ng-include>
+            </p>
+        </div>
+    </div>
+    <div class="media mb-4">
+        <div class="media-body">
+            <h5 class="mt-0">[style] - multiple processing.</h5>
+            <p class="style-test p-2" style="background-image: url(mobile.gif); --md-background-image: url(desktop.gif)">
+                <span class="d-none d-md-inline">Desktop background should be pink.</span>
+                <span class="d-md-none">Mobile background should be green.</span>
+            </p>
+        </div>
+    </div>
+    <div class="media mb-4">
+        <svg class="text-success mr-3" data-src="./file-code.svg"></svg>
+        <div class="media-body">
+            <h5 class="mt-0">svg[data-src] - class attribute merging</h5>
+            <p>&larr; Image you see must be green!</p>
+        </div>
+    </div>
+</div>
 </body>
 </html>
