@@ -1,11 +1,10 @@
 import { DomRenderer, isElement, isNodeWithChildren, stringToDom } from '@such-code/html-parser-utils';
-import { DomHandlerOptions, Node, NodeWithChildren } from 'domhandler/lib';
+import { DomHandlerOptions, Node } from 'domhandler/lib';
 import * as loaderUtils from 'loader-utils';
-import * as path from 'path';
-import { Rule } from './rules-configuration';
-import { convertToMutationRules, MutationRule } from './rules-internal';
 import { RawSourceMap } from 'source-map';
 import * as webpack from 'webpack';
+import { Rule } from './rules-configuration';
+import { convertToMutationRules, MutationRule } from './rules-internal';
 import { CodeExecutor, isArrayOfNodes, isHtmlResourceLoaderOptions, WebpackLoader, WebpackResolver } from './utils';
 
 type ContextOptions = {
@@ -112,9 +111,9 @@ function processNode(
         .then(($mutated: Node | Array<Node>) => {
             if (
                 isNodeWithChildren($node)
+                && isNodeWithChildren($mutated)
                 // if $mutated is an array - then it is already processed (tag was replaced with different content)
                 && !Array.isArray($mutated)
-                && $mutated instanceof NodeWithChildren
                 // process children only if they are same
                 && ($mutated === $node || $mutated.childNodes === $node.childNodes)
                 && Array.isArray($mutated.childNodes)

@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const html_parser_utils_1 = require("@such-code/html-parser-utils");
-const lib_1 = require("domhandler/lib");
 const loaderUtils = require("loader-utils");
 const rules_internal_1 = require("./rules-internal");
 const utils_1 = require("./utils");
@@ -82,9 +81,9 @@ function processNode($node, $rules, $options) {
     return applyRules($node, $rules, $options)
         .then(($mutated) => {
         if (html_parser_utils_1.isNodeWithChildren($node)
+            && html_parser_utils_1.isNodeWithChildren($mutated)
             // if $mutated is an array - then it is already processed (tag was replaced with different content)
             && !Array.isArray($mutated)
-            && $mutated instanceof lib_1.NodeWithChildren
             // process children only if they are same
             && ($mutated === $node || $mutated.childNodes === $node.childNodes)
             && Array.isArray($mutated.childNodes)

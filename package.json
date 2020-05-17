@@ -1,6 +1,6 @@
 {
   "name": "@such-code/html-resource-loader",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "Webpack loader to loads resources from HTML using set of user defined rules.",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
