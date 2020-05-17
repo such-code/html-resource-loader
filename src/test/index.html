@@ -39,7 +39,7 @@
 <div class="container">
     <h1 class="mb-3 mb-md-5">Test page</h1>
     <div class="media mb-4">
-        <img class="mr-3" src="./card.svg">
+        <img class="mr-3" src="./assets/card.svg">
         <div class="media-body">
             <h5 class="mt-0">img[src]</h5>
             Test is passed if image is displayed correctly.
@@ -82,7 +82,7 @@
             <h5 class="mt-0">[ng-include][data-attr]</h5>
             <p>
                 Image source is:
-                <span class="font-bold" ng-include="'./card.svg'" data-attr></span>
+                <span class="font-bold" ng-include="'./assets/card.svg'" data-attr></span>
             </p>
         </div>
     </div>
@@ -98,14 +98,14 @@
     <div class="media mb-4">
         <div class="media-body">
             <h5 class="mt-0">[style] - multiple processing.</h5>
-            <p class="style-test p-2" style="background-image: url(mobile.gif); --md-background-image: url(desktop.gif)">
+            <p class="style-test p-2" style="background-image: url(assets/mobile.gif); --md-background-image: url(assets/desktop.gif)">
                 <span class="d-none d-md-inline">Desktop background should be pink.</span>
                 <span class="d-md-none">Mobile background should be green.</span>
             </p>
         </div>
     </div>
     <div class="media mb-4">
-        <svg class="text-success mr-3" data-src="./file-code.svg"></svg>
+        <svg class="text-success mr-3" data-src="./assets/file-code.svg"></svg>
         <div class="media-body">
             <h5 class="mt-0">svg[data-src] - class attribute merging</h5>
             <p>&larr; Image you see must be green!</p>

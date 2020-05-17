@@ -1,4 +1,5 @@
 const path = require('path');
+const SuppressChunksPlugin = require('suppress-chunks-webpack-plugin').default;
 
 const publicPath = '/';
 
@@ -10,6 +11,7 @@ function resourceDeserializer($) {
     if (/^(['"])(.+(?!\1)).\1$/.test($)) {
         return $.replace(quoteTest, '$2');
     }
+    return $;
 }
 
 function resourceSerializer($) {
@@ -19,6 +21,7 @@ function resourceSerializer($) {
 function extractStyleAsObject($style) {
     return $style
         .split(';')
+        .filter($ => $.length > 1)
         .reduce(($acc, $expr) => {
             let [style, value] = $expr.split(':', 2);
             return {
@@ -140,45 +143,44 @@ module.exports = {
         rules: [
             {
                 test: /\.html?$/i,
-                issuer: {
-                    test: /\.html?$/i,
-                },
-                use: [
+                oneOf: [
                     {
-                        loader: 'raw-loader',
-                        options: { esModule: false, },
+                        issuer: {
+                            test: /\.html?$/i,
+                        },
+                        use: [
+                            {
+                                loader: 'raw-loader',
+                                options: { esModule: false, },
+                            },
+                            {
+                                loader: 'html-resource-loader',
+                                options: {
+                                    rules: resourceLoaderRules
+                                }
+                            }
+                        ],
                     },
                     {
-                        loader: 'html-resource-loader',
-                        options: {
-                            rules: resourceLoaderRules
-                        }
-                    }
+                        use: [
+                            {
+                                loader: 'file-loader',
+                                options: {
+                                    name: '[path][name].[ext]',
+                                }
+                            },
+                            {
+                                loader: 'html-resource-loader',
+                                options: {
+                                    rules: resourceLoaderRules
+                                }
+                            }
+                        ],
+                    },
                 ],
             },
             {
-                test: /\.html?$/i,
-                include: /index\.html$/i,
-                use: [
-                    {
-                        loader: 'file-loader',
-                        options: {
-                            name: '[path][name].[ext]',
-                        }
-                    },
-                    {
-                        loader: 'html-resource-loader',
-                        options: {
-                            rules: resourceLoaderRules
-                        }
-                    }
-                ],
-            },
-            {
-                test: /\.(svg|png|gif)$/i,
-                exclude: [
-                    path.resolve(__dirname, 'src/test/file-code.svg'),
-                ],
+                test: /\.(png|gif)$/i,
                 use: [
                     {
                         loader: 'file-loader',
@@ -191,19 +193,35 @@ module.exports = {
             },
             {
                 test: /\.svg$/i,
-                include: [
-                    path.resolve(__dirname, 'src/test/file-code.svg'),
-                ],
-                use: [
+                oneOf: [
                     {
-                        loader: 'raw-loader',
-                        options: { esModule: false, }
-                    }
-                ]
+                        include: [
+                            path.resolve(__dirname, 'src/test/assets/file-code.svg'),
+                        ],
+                        use: [
+                            {
+                                loader: 'raw-loader',
+                                options: { esModule: false, }
+                            }
+                        ],
+                    },
+                    {
+                        use: [
+                            {
+                                loader: 'file-loader',
+                                options: {
+                                    name: 'images/[path][name].[ext]',
+                                    limit: 1000
+                                }
+                            }
+                        ],
+                    },
+                ],
+
             }
         ]
     },
     plugins: [
-        // TODO: Add suppress module plugin to suppress main module.
+        new SuppressChunksPlugin([ { name: 'main', match: /\.js$/ } ]),
     ]
 };

@@ -6,7 +6,7 @@ import { Element, Node } from 'domhandler/lib';
  * Common for selector configuration rules.
  */
 type RuleSelectorBase = {
-    // Optional param to invert result of selection.
+    /** Optional param to invert result of selection. */
     exclude?: boolean,
 }
 
@@ -14,7 +14,7 @@ type RuleSelectorBase = {
  * Represents configuration object for selecting tag.
  */
 export type TagRuleSelector = {
-    // Tag name or RegExp to match multiple similar tags.
+    /** Tag name or RegExp to match multiple similar tags. */
     tag: string | RegExp,
 } & RuleSelectorBase
 
@@ -36,8 +36,9 @@ export function isTagRuleSelector($value: any): $value is TagRuleSelector {
  * Configuration object to represent attribute selector.
  */
 export type AttrRuleSelector = {
-    // Attribute name or RegExp to math multiple attribute names.
+    /** Attribute name or RegExp to math multiple attribute names. */
     attr: string | RegExp,
+    /** Filter result by attribute content. */
     filter?: ($: string) => boolean,
 } & RuleSelectorBase
 
@@ -76,10 +77,12 @@ export function isRuleSelector($value: any): $value is RuleSelector {
  * Common for all source rule configurations.
  */
 type RuleSourceBase = {
-    // Optional function if specific source extraction is required.
+    /** Optional function if specific source extraction is required. */
     deserialize?: ($: string) => string,
-    // By default resolution is made by webpack and it is correct approach, but if it is really required to do
-    // something special custom resolver could be used.
+    /**
+     * By default resolution is made by webpack and it is correct approach, but if it is really required to do
+     * something special custom resolver could be used.
+     */
     resolve?: ($context: string, $path: string) => string | Promise<string>,
 }
 
@@ -87,9 +90,9 @@ type RuleSourceBase = {
  * Represent object to extract resource path.
  */
 export type AttrRuleSource = {
-    // Attribute name or RegExp (only first match will be used, so make sure you know what are you doing).
+    /** Attribute name or RegExp (only first match will be used, so make sure you know what are you doing). */
     attr: string | RegExp,
-    // Optional flag to remove specified attribute in processed Node. Default `false`.
+    /** Optional flag to remove specified attribute in processed Node. Default `false`. */
     remove?: boolean,
 } & RuleSourceBase;
 
@@ -128,9 +131,9 @@ export function isRuleSource($value: any): $value is RuleSource {
  * Represent target as an attribute to contain processed resource result.
  */
 export type AttrRuleTarget = {
-    // Attribute name where result will be placed.
+    /** Attribute name where result will be placed. */
     attr: string,
-    // Optional serialization function if specific handling is required.
+    /** Optional serialization function if specific handling is required. */
     serialize?: ($: string, $prev?: string) => string,
 }
 
@@ -148,11 +151,11 @@ export function isAttrRuleTarget($value: any): $value is AttrRuleTarget {
  * Represents source element tag as a target for processed content. Only option is ot replace original tag.
  */
 export type TagRuleTarget = {
-    // Only option for the moment. Tag can only be replaced.
+    /** Only option for the moment. Tag can only be replaced. */
     tag: 'replace',
-    // Optional serialization function for specific treatment.
+    /** Optional serialization function for specific treatment. */
     serialize?: ($: Node | Array<Node>, $prev: Element) => Node | Array<Node>,
-    // Removes newlines and spaces from an end and beginning of received data. Default value is `true`.
+    /** Removes newlines and spaces from an end and beginning of received data. Default value is `true`. */
     trimContent?: boolean,
 }
 
@@ -170,8 +173,10 @@ export function isTagRuleTarget($value: any): $value is TagRuleTarget {
  * Target for initial element child content manipulation.
  */
 export type ContentRuleTarget = {
-    // Specifies content handling strategy. To replace possible Element content use 'replace'. To insert result in the
-    // beginning of Element child nodes use 'prepend'. 'append' will insert result in the end of child nodes.
+    /**
+     * Specifies content handling strategy. To replace possible Element content use 'replace'. To insert result in the
+     * beginning of Element child nodes use 'prepend'. 'append' will insert result in the end of child nodes.
+     */
     content: 'replace' | 'append' | 'prepend',
 }
 
@@ -210,11 +215,11 @@ export function isRuleTarget($value: any): $value is RuleTarget {
  * Object layout to represent loader rule.
  */
 export type Rule = {
-    // All selectors must match to add element for processing.
+    /** All selectors must match to add element for processing. */
     selector: Array<RuleSelector>,
-    // Determines what should be taken as a resource paths source.
+    /** Determines what should be taken as a resource paths source. */
     source: RuleSource,
-    // How Element will mutate after successful rule application.
+    /** How Element will mutate after successful rule application. */
     target: RuleTarget,
 }
 
