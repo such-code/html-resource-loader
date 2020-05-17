@@ -120,7 +120,7 @@ Imagine you need to load images from style attribute.
 ```
 
 Load could be configured like that to process those resources.
-```ecmascript 6
+```javascript
 /**
  * Parses html style content into object `{ [styleName: string]: string }`.
  */
