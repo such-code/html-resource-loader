@@ -1,3 +1,7 @@
+.DS_Store
+/.idea
+/dist/test
+/node_modules
 /src
 .gitignore
 tsconfig.json
