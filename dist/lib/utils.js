@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isArrayOfNodes = exports.isHtmlResourceLoaderOptions = exports.CodeExecutor = exports.WebpackLoader = exports.WebpackResolver = void 0;
 const vm = require("vm");
 const html_parser_utils_1 = require("@such-code/html-parser-utils");
 const rules_configuration_1 = require("./rules-configuration");
@@ -43,30 +44,33 @@ class WebpackLoader {
     }
 }
 exports.WebpackLoader = WebpackLoader;
-class CodeExecutor {
-    constructor(publicPath) {
-        this.publicPath = publicPath;
-    }
-    evaluateCode($context, $source, $fileName) {
-        if (!CodeExecutor.executionCache.hasOwnProperty($source)) {
-            const script = new vm.Script($source, {
-                filename: $fileName,
-                displayErrors: true,
-            });
-            const sandbox = vm.createContext({
-                module: { exports: {} },
-                __webpack_public_path__: this.publicPath,
-            });
-            script.runInContext(sandbox);
-            // Save to cache.
-            CodeExecutor.executionCache[$source] = sandbox['module'] && sandbox['module']['exports'];
+let CodeExecutor = /** @class */ (() => {
+    class CodeExecutor {
+        constructor(publicPath) {
+            this.publicPath = publicPath;
         }
-        // Return result from cache.
-        return CodeExecutor.executionCache[$source];
+        evaluateCode($context, $source, $fileName) {
+            if (!CodeExecutor.executionCache.hasOwnProperty($source)) {
+                const script = new vm.Script($source, {
+                    filename: $fileName,
+                    displayErrors: true,
+                });
+                const sandbox = vm.createContext({
+                    module: { exports: {} },
+                    __webpack_public_path__: this.publicPath,
+                });
+                script.runInContext(sandbox);
+                // Save to cache.
+                CodeExecutor.executionCache[$source] = sandbox['module'] && sandbox['module']['exports'];
+            }
+            // Return result from cache.
+            return CodeExecutor.executionCache[$source];
+        }
     }
-}
+    CodeExecutor.executionCache = {};
+    return CodeExecutor;
+})();
 exports.CodeExecutor = CodeExecutor;
-CodeExecutor.executionCache = {};
 /**
  * Type guard to check if received loader options are HtmlResourceLoaderOptions.
  * @param $value
@@ -89,3 +93,4 @@ function isArrayOfNodes($value) {
     return Array.isArray($value) && $value.every(html_parser_utils_1.isNode);
 }
 exports.isArrayOfNodes = isArrayOfNodes;
+//# sourceMappingURL=utils.js.map

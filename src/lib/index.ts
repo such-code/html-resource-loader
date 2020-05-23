@@ -1,5 +1,6 @@
 import { DomRenderer, isElement, isNodeWithChildren, stringToDom } from '@such-code/html-parser-utils';
 import { DomHandlerOptions, Node } from 'domhandler/lib';
+import { ParserOptions } from 'htmlparser2';
 import * as loaderUtils from 'loader-utils';
 import { RawSourceMap } from 'source-map';
 import * as webpack from 'webpack';
@@ -146,6 +147,7 @@ function processNodes(
 export type HtmlResourceLoaderOptions = {
     rules: Array<Rule>,
     publicPath?: string | (($context: string) => string),
+    htmlParserOptions?: ParserOptions,
     domHandlerOptions?: DomHandlerOptions,
 }
 
@@ -176,7 +178,10 @@ module.exports = <webpack.loader.Loader>function htmlResourceLoaderFn(
                 );
 
             // Check is $meta already has parsed AST.
-            const dom: Promise<Array<Node>> = isArrayOfNodes($meta) ? Promise.resolve($meta) : stringToDom($source);
+            const dom: Promise<Array<Node>> = isArrayOfNodes($meta)
+                ? Promise.resolve($meta)
+                : stringToDom($source, options.htmlParserOptions);
+
             // Process AST
             dom
                 .then(($domElements: Array<Node>) => {

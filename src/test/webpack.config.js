@@ -1,6 +1,10 @@
 const path = require('path');
 const SuppressChunksPlugin = require('suppress-chunks-webpack-plugin').default;
 
+/** @typedef { import(webpack/declarations/WebpackOptions).WebpackOptions } WebpackOptions */
+/** @typedef { import(@such-code/content-url-loader).ContentUrlLoaderOptions } ContentUrlLoaderOptions */
+/** @typedef { import(./dist/lib/rules-configuration).Rule } ResourceLoaderRule */
+
 const publicPath = '/';
 
 const quoteTest = /^(['"])(.+(?!\1).)\1$/;
@@ -49,6 +53,10 @@ function extractFromUrl($) {
     return $;
 }
 
+/**
+ * @param $styleName string
+ * @return ResourceLoaderRule
+ */
 function buildStyleUrlRule($styleName) {
     return {
         selector: [
@@ -78,11 +86,30 @@ function buildStyleUrlRule($styleName) {
     };
 }
 
+/**
+ * @type ResourceLoaderRule[]
+ */
 const resourceLoaderRules = [
+    // Any <img src="gif|png|jpg"> except for <img src="image.svg">
     {
-        selector: [ { tag: 'img' }, { attr: 'src' } ],
+        selector: [ { tag: 'img' }, { attr: 'src', filter: $ => /\.(?!svg($|\?))/.test($) } ],
         source: { attr: 'src' },
         target: { attr: 'src' }
+    },
+    // <img src="svg"> by default is replaced by svg content, requires specific loader!
+    {
+        selector: [ { tag: 'svg' }, { attr: 'data-src' }],
+        source: { attr: 'data-src', },
+        target: {
+            tag: 'replace',
+            serialize: ($, $prev) => {
+                if (Array.isArray($)) {
+                    throw Error('Something went wrong, should be only one node.');
+                }
+                $.attribs.class = $.attribs.class + ' ' + $prev.attribs.class;
+                return $;
+            },
+        }
     },
     {
         selector: [ { tag: 'ng-include' }, { attr: 'src', filter: stringFilter } ],
@@ -111,32 +138,21 @@ const resourceLoaderRules = [
     },
     buildStyleUrlRule('background-image'),
     buildStyleUrlRule('--md-background-image'),
-    {
-        selector: [ { tag: 'svg' }, { attr: 'data-src' }],
-        source: { attr: 'data-src', },
-        target: {
-            tag: 'replace',
-            serialize: ($, $prev) => {
-                if (Array.isArray($)) {
-                    throw Error('Something went wrong, should be only one node.');
-                }
-                $.attribs.class = $.attribs.class + ' ' + $prev.attribs.class;
-                return $;
-            },
-        }
-    }
 ];
 
+/**
+ * @type WebpackOptions
+ */
 module.exports = {
     entry: './index.html',
-    context: path.resolve(__dirname, 'src/test'),
+    context: __dirname,
     resolveLoader: {
         alias: {
-            'html-resource-loader': require.resolve('./')
+            'html-resource-loader': require.resolve('../../')
         }
     },
     output: {
-        path: path.resolve(__dirname, 'dist/test'),
+        path: path.resolve(__dirname, '../../dist/test'),
         publicPath: publicPath,
     },
     module: {
@@ -196,7 +212,7 @@ module.exports = {
                 oneOf: [
                     {
                         include: [
-                            path.resolve(__dirname, 'src/test/assets/file-code.svg'),
+                            path.resolve(__dirname, './assets/file-code.svg'),
                         ],
                         use: [
                             {

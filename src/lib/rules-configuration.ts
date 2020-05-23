@@ -128,6 +128,14 @@ export function isRuleSource($value: any): $value is RuleSource {
 // --- Target ------------------------------------------------------------------------------------------------------- //
 
 /**
+ * Common target rule properties.
+ */
+type RuleTargetBase = {
+    /** This parameter is required only for situations when several targets are defined. */
+    shouldBeUsed?: ($content: string, $element: Node, $oldElement: Node) => boolean,
+}
+
+/**
  * Represent target as an attribute to contain processed resource result.
  */
 export type AttrRuleTarget = {
@@ -135,7 +143,7 @@ export type AttrRuleTarget = {
     attr: string,
     /** Optional serialization function if specific handling is required. */
     serialize?: ($: string, $prev?: string) => string,
-}
+} & RuleTargetBase
 
 /**
  * Type guard to check if $value is AttrRuleTarget.
@@ -157,7 +165,7 @@ export type TagRuleTarget = {
     serialize?: ($: Node | Array<Node>, $prev: Element) => Node | Array<Node>,
     /** Removes newlines and spaces from an end and beginning of received data. Default value is `true`. */
     trimContent?: boolean,
-}
+} & RuleTargetBase
 
 /**
  * Type guard to check if $value is TagRuleTarget.
@@ -178,7 +186,7 @@ export type ContentRuleTarget = {
      * beginning of Element child nodes use 'prepend'. 'append' will insert result in the end of child nodes.
      */
     content: 'replace' | 'append' | 'prepend',
-}
+} & RuleTargetBase
 
 /**
  * Checks if $value is ContentRuleTarget.
@@ -219,8 +227,12 @@ export type Rule = {
     selector: Array<RuleSelector>,
     /** Determines what should be taken as a resource paths source. */
     source: RuleSource,
-    /** How Element will mutate after successful rule application. */
-    target: RuleTarget,
+    /**
+     * How Element will mutate after successful rule application. If several rules are provided, each rule will be
+     * checked for `shouldBeUsed` function. First rule returned true will be used. Otherwise last rule in an array will
+     * be used.
+     */
+    target: RuleTarget | Array<RuleTarget>,
 }
 
 /**
@@ -232,5 +244,8 @@ export function isRule($value: any): $value is Rule {
     return typeof $value === 'object'
         && Array.isArray($value.selector) && $value.selector.every(isRuleSelector)
         && isRuleSource($value.source)
-        && isRuleTarget($value.target);
+        && (
+            isRuleTarget($value.target)
+            || (Array.isArray($value.target) && $value.target.every(isRuleTarget))
+        );
 }

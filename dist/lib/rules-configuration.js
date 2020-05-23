@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isRule = exports.isRuleTarget = exports.isContentRuleTarget = exports.isTagRuleTarget = exports.isAttrRuleTarget = exports.isRuleSource = exports.isAttrRuleSource = exports.isRuleSelector = exports.isAttrRuleSelector = exports.isTagRuleSelector = void 0;
 /**
  * Type guard to make sure $value is TagRuleSelector.
  * @param $value
@@ -106,6 +107,8 @@ function isRule($value) {
     return typeof $value === 'object'
         && Array.isArray($value.selector) && $value.selector.every(isRuleSelector)
         && isRuleSource($value.source)
-        && isRuleTarget($value.target);
+        && (isRuleTarget($value.target)
+            || (Array.isArray($value.target) && $value.target.every(isRuleTarget)));
 }
 exports.isRule = isRule;
+//# sourceMappingURL=rules-configuration.js.map

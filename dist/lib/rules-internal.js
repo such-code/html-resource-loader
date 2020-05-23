@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.convertToMutationRules = exports.MutationRule = exports.MutationContentRule = exports.MutationAttrRule = exports.MutationTagRule = exports.MutationRuleTarget = exports.MutationRuleAttrSource = exports.MutationRuleSource = exports.MutationRuleAttrSelector = exports.MutationRuleTagSelector = exports.MutationRuleSelector = void 0;
 const html_parser_utils_1 = require("@such-code/html-parser-utils");
 const rules_configuration_1 = require("./rules-configuration");
 // --- Selector ----------------------------------------------------------------------------------------------------- //
@@ -62,13 +63,19 @@ exports.MutationRuleAttrSelector = MutationRuleAttrSelector;
  * MutationRule.
  */
 class MutationRuleSource {
-    constructor(discard, $resolve) {
-        this.discard = discard;
+    constructor($resolve) {
         this.hasResolver = typeof $resolve === 'function';
         this.resolve = typeof $resolve === 'function' ? $resolve : MutationRuleSource.defaultResolver;
     }
     static defaultResolver($context, $path) {
         return Promise.reject(Error('There are no resolver specified.'));
+    }
+    /**
+     * Prepares element for further processing. By default specific processing is not required.
+     * @param $element Element
+     */
+    prepare($element) {
+        return $element;
     }
 }
 exports.MutationRuleSource = MutationRuleSource;
@@ -77,13 +84,14 @@ exports.MutationRuleSource = MutationRuleSource;
  */
 class MutationRuleAttrSource extends MutationRuleSource {
     constructor($source) {
-        super(typeof $source.remove === 'boolean' ? $source.remove : false, $source.resolve);
+        super($source.resolve);
         this.attr = typeof $source.attr === 'string'
             ? html_parser_utils_1.stringToRegExp($source.attr)
             : $source.attr;
         this.deserialize = typeof $source.deserialize === 'function'
             ? $source.deserialize
             : MutationRuleAttrSource.commonDeserializer;
+        this.discardAttr = typeof $source.remove === 'boolean' ? $source.remove : false;
     }
     static commonDeserializer($value) {
         return $value;
@@ -94,16 +102,18 @@ class MutationRuleAttrSource extends MutationRuleSource {
     extract($element) {
         return this.deserialize($element.attribs[this.extractAttribute($element)]);
     }
-    clean($element) {
-        const attr = this.extractAttribute($element);
-        $element.attribs = Object
-            .keys($element.attribs)
-            .reduce(($acc, $current) => {
-            if ($current !== attr) {
-                $acc[$current] = $element.attribs[$current];
-            }
-            return $acc;
-        }, {});
+    prepare($element) {
+        if (this.discardAttr) {
+            const attr = this.extractAttribute($element);
+            $element.attribs = Object
+                .keys($element.attribs)
+                .reduce(($acc, $current) => {
+                if ($current !== attr) {
+                    $acc[$current] = $element.attribs[$current];
+                }
+                return $acc;
+            }, {});
+        }
         return $element;
     }
 }
@@ -112,42 +122,19 @@ exports.MutationRuleAttrSource = MutationRuleAttrSource;
 /**
  * Abstract rule used as an aggregator for selection, source and target rules. These rules are used for processing.
  */
-class MutationRule {
-    constructor(selectors, source) {
-        this.selectors = selectors;
-        this.source = source;
-    }
+class MutationRuleTarget {
     /**
-     * Checks is all selector rules match Element.
-     * @param $element
-     * @returns boolean
+     *
      */
-    test($element) {
-        return this.selectors.every($ => $.test($element));
-    }
-    /**
-     * Returns resource source path for this Element.
-     * @param $element
-     */
-    extract($element) {
-        return this.source.extract($element);
-    }
-    /**
-     * @param $context
-     * @param $path
-     */
-    resolve($context, $path) {
-        return this.source.resolve($context, $path);
-    }
-    get hasResolver() { return this.source.hasResolver; }
+    get shouldBeUsed() { return false; }
 }
-exports.MutationRule = MutationRule;
+exports.MutationRuleTarget = MutationRuleTarget;
 /**
  * Mutates whole Element.
  */
-class MutationTagRule extends MutationRule {
-    constructor($selectors, $source, $target) {
-        super($selectors, $source);
+class MutationTagRule extends MutationRuleTarget {
+    constructor($target) {
+        super();
         this.behaviour = $target.tag;
         this.serialize = typeof $target.serialize === 'function'
             ? $target.serialize
@@ -180,9 +167,9 @@ exports.MutationTagRule = MutationTagRule;
 /**
  * Rule to mutate Elements attribute.
  */
-class MutationAttrRule extends MutationRule {
-    constructor($selectors, $source, $target) {
-        super($selectors, $source);
+class MutationAttrRule extends MutationRuleTarget {
+    constructor($target) {
+        super();
         this.attr = $target.attr;
         this.serialize = typeof $target.serialize === 'function'
             ? $target.serialize
@@ -192,9 +179,6 @@ class MutationAttrRule extends MutationRule {
         return $value;
     }
     apply($element, $data) {
-        if (this.source.discard) {
-            $element = this.source.clean($element);
-        }
         $element.attribs = Object.assign(Object.assign({}, $element.attribs), { [this.attr]: this.serialize($data, $element.attribs[this.attr]) });
         return Promise.resolve($element);
     }
@@ -203,17 +187,14 @@ exports.MutationAttrRule = MutationAttrRule;
 /**
  * Rule to mutate Elements child nodes.
  */
-class MutationContentRule extends MutationRule {
-    constructor($selectors, $source, $target) {
-        super($selectors, $source);
+class MutationContentRule extends MutationRuleTarget {
+    constructor($target) {
+        super();
         this.behaviour = $target.content;
     }
     apply($element, $data) {
         return html_parser_utils_1.stringToDom($data)
             .then($dom => {
-            if (this.source.discard) {
-                $element = this.source.clean($element);
-            }
             switch (this.behaviour) {
                 case 'append':
                     $element.children = $element.children.concat($dom);
@@ -229,29 +210,84 @@ class MutationContentRule extends MutationRule {
     }
 }
 exports.MutationContentRule = MutationContentRule;
+// --- Rule main class ---------------------------------------------------------------------------------------------- //
+class MutationRule {
+    constructor(selectors, source, $target) {
+        this.selectors = selectors;
+        this.source = source;
+        this.target = Array.isArray($target) ? $target : [$target];
+    }
+    /**
+     * Checks is all selector rules match Element.
+     * @param $element
+     * @returns boolean
+     */
+    test($element) {
+        return this.selectors.every($ => $.test($element));
+    }
+    /**
+     * Returns resource source path for this Element.
+     * @param $element
+     */
+    extract($element) {
+        return this.source.extract($element);
+    }
+    /**
+     * @param $context
+     * @param $path
+     */
+    resolve($context, $path) {
+        return this.source.resolve($context, $path);
+    }
+    /**
+     * Applies mutation to an Element.
+     * @param $element
+     * @param $data
+     * @returns Promise<Node | Array<Node>> single or multiple nodes could be returned in a result.
+     */
+    apply($element, $data) {
+        return this.target
+            .find(($value, $index, $targets) => {
+            return $value.shouldBeUsed || $targets.length - $index === 1;
+        })
+            .apply(this.source.prepare($element), $data);
+    }
+    get hasResolver() { return this.source.hasResolver; }
+}
+exports.MutationRule = MutationRule;
 // --- Utils -------------------------------------------------------------------------------------------------------- //
+function convertToSelectorRule($rule) {
+    if (rules_configuration_1.isTagRuleSelector($rule)) {
+        return new MutationRuleTagSelector($rule);
+    }
+    return new MutationRuleAttrSelector($rule);
+}
+function convertToSourceRule($rule) {
+    return new MutationRuleAttrSource($rule);
+}
+function convertToTargetRule($rule) {
+    if (rules_configuration_1.isTagRuleTarget($rule)) {
+        return new MutationTagRule($rule);
+    }
+    else if (rules_configuration_1.isAttrRuleTarget($rule)) {
+        return new MutationAttrRule($rule);
+    }
+    return new MutationContentRule($rule);
+}
 /**
  * Converts rule definitions from configuration ot MutationRules.
  * @param $rules received from configuration. They must be already type checked.
- * @returns Array<MutationRule>
+ * @returns Array<MutationRuleBase>
  */
 function convertToMutationRules($rules) {
     return $rules.map(($rule) => {
-        const selectors = $rule.selector
-            .map(selector => {
-            if (rules_configuration_1.isTagRuleSelector(selector)) {
-                return new MutationRuleTagSelector(selector);
-            }
-            return new MutationRuleAttrSelector(selector);
-        });
-        const source = new MutationRuleAttrSource($rule.source);
-        if (rules_configuration_1.isTagRuleTarget($rule.target)) {
-            return new MutationTagRule(selectors, source, $rule.target);
-        }
-        else if (rules_configuration_1.isAttrRuleTarget($rule.target)) {
-            return new MutationAttrRule(selectors, source, $rule.target);
-        }
-        return new MutationContentRule(selectors, source, $rule.target);
+        const selectors = $rule.selector.map(convertToSelectorRule);
+        const source = convertToSourceRule($rule.source);
+        const target = Array.isArray($rule.target)
+            ? $rule.target.map(convertToTargetRule)
+            : convertToTargetRule($rule.target);
+        return new MutationRule(selectors, source, target);
     });
 }
 exports.convertToMutationRules = convertToMutationRules;
+//# sourceMappingURL=rules-internal.js.map

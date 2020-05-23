@@ -125,7 +125,9 @@ $meta) {
                     ? this._compilation.outputOptions.publicPath
                     : '');
             // Check is $meta already has parsed AST.
-            const dom = utils_1.isArrayOfNodes($meta) ? Promise.resolve($meta) : html_parser_utils_1.stringToDom($source);
+            const dom = utils_1.isArrayOfNodes($meta)
+                ? Promise.resolve($meta)
+                : html_parser_utils_1.stringToDom($source, options.htmlParserOptions);
             // Process AST
             dom
                 .then(($domElements) => {
@@ -152,3 +154,4 @@ $meta) {
     }
     return $source;
 };
+//# sourceMappingURL=index.js.map

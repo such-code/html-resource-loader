@@ -83,6 +83,13 @@ export declare type RuleSource = AttrRuleSource;
  */
 export declare function isRuleSource($value: any): $value is RuleSource;
 /**
+ * Common target rule properties.
+ */
+declare type RuleTargetBase = {
+    /** This parameter is required only for situations when several targets are defined. */
+    shouldBeUsed?: ($content: string, $element: Node, $oldElement: Node) => boolean;
+};
+/**
  * Represent target as an attribute to contain processed resource result.
  */
 export declare type AttrRuleTarget = {
@@ -90,7 +97,7 @@ export declare type AttrRuleTarget = {
     attr: string;
     /** Optional serialization function if specific handling is required. */
     serialize?: ($: string, $prev?: string) => string;
-};
+} & RuleTargetBase;
 /**
  * Type guard to check if $value is AttrRuleTarget.
  * @param $value
@@ -107,7 +114,7 @@ export declare type TagRuleTarget = {
     serialize?: ($: Node | Array<Node>, $prev: Element) => Node | Array<Node>;
     /** Removes newlines and spaces from an end and beginning of received data. Default value is `true`. */
     trimContent?: boolean;
-};
+} & RuleTargetBase;
 /**
  * Type guard to check if $value is TagRuleTarget.
  * @param $value
@@ -123,7 +130,7 @@ export declare type ContentRuleTarget = {
      * beginning of Element child nodes use 'prepend'. 'append' will insert result in the end of child nodes.
      */
     content: 'replace' | 'append' | 'prepend';
-};
+} & RuleTargetBase;
 /**
  * Checks if $value is ContentRuleTarget.
  * @param $value
@@ -147,8 +154,12 @@ export declare type Rule = {
     selector: Array<RuleSelector>;
     /** Determines what should be taken as a resource paths source. */
     source: RuleSource;
-    /** How Element will mutate after successful rule application. */
-    target: RuleTarget;
+    /**
+     * How Element will mutate after successful rule application. If several rules are provided, each rule will be
+     * checked for `shouldBeUsed` function. First rule returned true will be used. Otherwise last rule in an array will
+     * be used.
+     */
+    target: RuleTarget | Array<RuleTarget>;
 };
 /**
  * Type guard to check if $value is Rule.
