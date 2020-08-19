@@ -138,6 +138,11 @@ const resourceLoaderRules = [
     },
     buildStyleUrlRule('background-image'),
     buildStyleUrlRule('--md-background-image'),
+    {
+        selector: [{type: 'script'}, {attr: 'type', filter: $ => $ === 'application/javascript'}, {attr: 'src'} ],
+        source: { attr: 'src', remove: true },
+        target: { attr: 'data-src' },
+    }
 ];
 
 /**

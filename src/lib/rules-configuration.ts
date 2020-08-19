@@ -11,6 +11,27 @@ type RuleSelectorBase = {
 }
 
 /**
+ * Configuration object for loose tag selection by type (ex. { type: 'tag' } will select all element tags).
+ */
+export type TypeRuleSelector = {
+    type: 'tag' | 'script' | 'style',
+} & RuleSelectorBase
+
+/**
+ * Type guard to make sure $value is TypeRuleSelector.
+ * @param $value
+ * @returns boolean
+ */
+export function isTypeRuleSelector($value: any): $value is TypeRuleSelector {
+    return typeof $value === 'object'
+        && $value !== null
+        && typeof $value.type === 'string'
+        && (
+            $value.type === 'tag' || $value.type === 'script' || $value.type === 'style'
+        );
+}
+
+/**
  * Represents configuration object for selecting tag.
  */
 export type TagRuleSelector = {
@@ -25,7 +46,7 @@ export type TagRuleSelector = {
  */
 export function isTagRuleSelector($value: any): $value is TagRuleSelector {
     return typeof $value === 'object'
-        && 'tag' in $value
+        && $value !== null
         && (
             typeof $value.tag === 'string'
             || $value.tag instanceof RegExp
@@ -49,7 +70,7 @@ export type AttrRuleSelector = {
  */
 export function isAttrRuleSelector($value: any): $value is AttrRuleSelector {
     return typeof $value === 'object'
-        && 'attr' in $value
+        && $value !== null
         && (
             typeof $value.attr === 'string'
             || $value.attr instanceof RegExp
@@ -67,7 +88,8 @@ export type RuleSelector = TagRuleSelector | AttrRuleSelector
  * @returns boolean
  */
 export function isRuleSelector($value: any): $value is RuleSelector {
-    return isTagRuleSelector($value)
+    return isTypeRuleSelector($value)
+        || isTagRuleSelector($value)
         || isAttrRuleSelector($value);
 }
 
@@ -103,7 +125,7 @@ export type AttrRuleSource = {
  */
 export function isAttrRuleSource($value: any): $value is AttrRuleSource {
     return typeof $value === 'object'
-        && 'attr' in $value
+        && $value !== null
         && (
             typeof $value.attr === 'string'
             || $value.attr instanceof RegExp
@@ -152,6 +174,7 @@ export type AttrRuleTarget = {
  */
 export function isAttrRuleTarget($value: any): $value is AttrRuleTarget {
     return typeof $value === 'object'
+        && $value !== null
         && typeof $value.attr === 'string';
 }
 
@@ -174,6 +197,7 @@ export type TagRuleTarget = {
  */
 export function isTagRuleTarget($value: any): $value is TagRuleTarget {
     return typeof $value === 'object'
+        && $value !== null
         && $value.tag === 'replace';
 }
 
@@ -195,6 +219,7 @@ export type ContentRuleTarget = {
  */
 export function isContentRuleTarget($value: any): $value is ContentRuleTarget {
     return typeof $value === 'object'
+        && $value !== null
         && (
             $value.content === 'replace'
             || $value.content === 'append'

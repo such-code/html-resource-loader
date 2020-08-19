@@ -29,7 +29,13 @@ export declare type Rule = {
 };
 
 // --- SELECTORS --- //
-
+/**
+ * Configuration object for loose tag selection by type (ex. { type: 'tag' } will select all element tags).
+ */
+export declare type TypeRuleSelector = {
+    type: 'tag' | 'script' | 'style';
+    exclude?: boolean;
+};
 /**
  * Represents configuration object for selecting tag.
  */

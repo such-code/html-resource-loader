@@ -8,12 +8,13 @@ import {
     isAttrRuleTarget,
     isTagRuleSelector,
     isTagRuleTarget,
+    isTypeRuleSelector,
     Rule,
     RuleSelector,
     RuleSource,
     RuleTarget,
     TagRuleSelector,
-    TagRuleTarget
+    TagRuleTarget, TypeRuleSelector
 } from './rules-configuration';
 
 
@@ -33,6 +34,23 @@ export abstract class MutationRuleSelector {
      * @returns boolean
      */
     public abstract test($element: Element): boolean;
+}
+
+/**
+ * Rule to test element type.
+ */
+export class MutationRuleTypeSelector extends MutationRuleSelector {
+    protected readonly type: string;
+
+    public constructor($rule: TypeRuleSelector) {
+        super(typeof $rule.exclude === 'boolean' ? $rule.exclude : false);
+        this.type = $rule.type;
+    }
+
+    public test($element: Element): boolean {
+        const result = $element.type === this.type;
+        return this.negotiate ? !result : result;
+    }
 }
 
 /**
@@ -77,8 +95,8 @@ export class MutationRuleAttrSelector extends MutationRuleSelector {
     }
 
     public test($element: Element): boolean {
-        const result = $element.type === 'tag'
-            && typeof $element.attribs === 'object'
+        const result = typeof $element.attribs === 'object'
+            && $element.attribs !== null
             && Object
                 .keys($element.attribs)
                 .findIndex($ => {
@@ -357,6 +375,9 @@ export class MutationRule {
 // --- Utils -------------------------------------------------------------------------------------------------------- //
 
 function convertToSelectorRule($rule: RuleSelector): MutationRuleSelector {
+    if (isTypeRuleSelector($rule)) {
+        return new MutationRuleTypeSelector($rule);
+    }
     if (isTagRuleSelector($rule)) {
         return new MutationRuleTagSelector($rule);
     }

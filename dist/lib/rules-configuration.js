@@ -1,6 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isRule = exports.isRuleTarget = exports.isContentRuleTarget = exports.isTagRuleTarget = exports.isAttrRuleTarget = exports.isRuleSource = exports.isAttrRuleSource = exports.isRuleSelector = exports.isAttrRuleSelector = exports.isTagRuleSelector = void 0;
+exports.isRule = exports.isRuleTarget = exports.isContentRuleTarget = exports.isTagRuleTarget = exports.isAttrRuleTarget = exports.isRuleSource = exports.isAttrRuleSource = exports.isRuleSelector = exports.isAttrRuleSelector = exports.isTagRuleSelector = exports.isTypeRuleSelector = void 0;
+/**
+ * Type guard to make sure $value is TypeRuleSelector.
+ * @param $value
+ * @returns boolean
+ */
+function isTypeRuleSelector($value) {
+    return typeof $value === 'object'
+        && $value !== null
+        && typeof $value.type === 'string'
+        && ($value.type === 'tag' || $value.type === 'script' || $value.type === 'style');
+}
+exports.isTypeRuleSelector = isTypeRuleSelector;
 /**
  * Type guard to make sure $value is TagRuleSelector.
  * @param $value
@@ -8,7 +20,7 @@ exports.isRule = exports.isRuleTarget = exports.isContentRuleTarget = exports.is
  */
 function isTagRuleSelector($value) {
     return typeof $value === 'object'
-        && 'tag' in $value
+        && $value !== null
         && (typeof $value.tag === 'string'
             || $value.tag instanceof RegExp);
 }
@@ -20,7 +32,7 @@ exports.isTagRuleSelector = isTagRuleSelector;
  */
 function isAttrRuleSelector($value) {
     return typeof $value === 'object'
-        && 'attr' in $value
+        && $value !== null
         && (typeof $value.attr === 'string'
             || $value.attr instanceof RegExp);
 }
@@ -31,7 +43,8 @@ exports.isAttrRuleSelector = isAttrRuleSelector;
  * @returns boolean
  */
 function isRuleSelector($value) {
-    return isTagRuleSelector($value)
+    return isTypeRuleSelector($value)
+        || isTagRuleSelector($value)
         || isAttrRuleSelector($value);
 }
 exports.isRuleSelector = isRuleSelector;
@@ -42,7 +55,7 @@ exports.isRuleSelector = isRuleSelector;
  */
 function isAttrRuleSource($value) {
     return typeof $value === 'object'
-        && 'attr' in $value
+        && $value !== null
         && (typeof $value.attr === 'string'
             || $value.attr instanceof RegExp);
 }
@@ -63,6 +76,7 @@ exports.isRuleSource = isRuleSource;
  */
 function isAttrRuleTarget($value) {
     return typeof $value === 'object'
+        && $value !== null
         && typeof $value.attr === 'string';
 }
 exports.isAttrRuleTarget = isAttrRuleTarget;
@@ -73,6 +87,7 @@ exports.isAttrRuleTarget = isAttrRuleTarget;
  */
 function isTagRuleTarget($value) {
     return typeof $value === 'object'
+        && $value !== null
         && $value.tag === 'replace';
 }
 exports.isTagRuleTarget = isTagRuleTarget;
@@ -83,6 +98,7 @@ exports.isTagRuleTarget = isTagRuleTarget;
  */
 function isContentRuleTarget($value) {
     return typeof $value === 'object'
+        && $value !== null
         && ($value.content === 'replace'
             || $value.content === 'append'
             || $value.content === 'prepend');

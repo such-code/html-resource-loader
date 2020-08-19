@@ -7,6 +7,18 @@ declare type RuleSelectorBase = {
     exclude?: boolean;
 };
 /**
+ * Configuration object for loose tag selection by type (ex. { type: 'tag' } will select all element tags).
+ */
+export declare type TypeRuleSelector = {
+    type: 'tag' | 'script' | 'style';
+} & RuleSelectorBase;
+/**
+ * Type guard to make sure $value is TypeRuleSelector.
+ * @param $value
+ * @returns boolean
+ */
+export declare function isTypeRuleSelector($value: any): $value is TypeRuleSelector;
+/**
  * Represents configuration object for selecting tag.
  */
 export declare type TagRuleSelector = {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.convertToMutationRules = exports.MutationRule = exports.MutationContentRule = exports.MutationAttrRule = exports.MutationTagRule = exports.MutationRuleTarget = exports.MutationRuleAttrSource = exports.MutationRuleSource = exports.MutationRuleAttrSelector = exports.MutationRuleTagSelector = exports.MutationRuleSelector = void 0;
+exports.convertToMutationRules = exports.MutationRule = exports.MutationContentRule = exports.MutationAttrRule = exports.MutationTagRule = exports.MutationRuleTarget = exports.MutationRuleAttrSource = exports.MutationRuleSource = exports.MutationRuleAttrSelector = exports.MutationRuleTagSelector = exports.MutationRuleTypeSelector = exports.MutationRuleSelector = void 0;
 const html_parser_utils_1 = require("@such-code/html-parser-utils");
 const rules_configuration_1 = require("./rules-configuration");
 // --- Selector ----------------------------------------------------------------------------------------------------- //
@@ -13,6 +13,20 @@ class MutationRuleSelector {
     }
 }
 exports.MutationRuleSelector = MutationRuleSelector;
+/**
+ * Rule to test element type.
+ */
+class MutationRuleTypeSelector extends MutationRuleSelector {
+    constructor($rule) {
+        super(typeof $rule.exclude === 'boolean' ? $rule.exclude : false);
+        this.type = $rule.type;
+    }
+    test($element) {
+        const result = $element.type === this.type;
+        return this.negotiate ? !result : result;
+    }
+}
+exports.MutationRuleTypeSelector = MutationRuleTypeSelector;
 /**
  * Rule to test element tag name.
  */
@@ -46,8 +60,8 @@ class MutationRuleAttrSelector extends MutationRuleSelector {
         return true;
     }
     test($element) {
-        const result = $element.type === 'tag'
-            && typeof $element.attribs === 'object'
+        const result = typeof $element.attribs === 'object'
+            && $element.attribs !== null
             && Object
                 .keys($element.attribs)
                 .findIndex($ => {
@@ -257,6 +271,9 @@ class MutationRule {
 exports.MutationRule = MutationRule;
 // --- Utils -------------------------------------------------------------------------------------------------------- //
 function convertToSelectorRule($rule) {
+    if (rules_configuration_1.isTypeRuleSelector($rule)) {
+        return new MutationRuleTypeSelector($rule);
+    }
     if (rules_configuration_1.isTagRuleSelector($rule)) {
         return new MutationRuleTagSelector($rule);
     }

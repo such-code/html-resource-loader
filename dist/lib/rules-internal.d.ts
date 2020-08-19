@@ -1,5 +1,5 @@
 import { Element, Node } from "domhandler/lib";
-import { AttrRuleSelector, AttrRuleSource, AttrRuleTarget, ContentRuleTarget, Rule, TagRuleSelector, TagRuleTarget } from './rules-configuration';
+import { AttrRuleSelector, AttrRuleSource, AttrRuleTarget, ContentRuleTarget, Rule, TagRuleSelector, TagRuleTarget, TypeRuleSelector } from './rules-configuration';
 /**
  * Abstract class for selector rules. Is used as a selection behaviour for MutationRule.
  */
@@ -12,6 +12,14 @@ export declare abstract class MutationRuleSelector {
      * @returns boolean
      */
     abstract test($element: Element): boolean;
+}
+/**
+ * Rule to test element type.
+ */
+export declare class MutationRuleTypeSelector extends MutationRuleSelector {
+    protected readonly type: string;
+    constructor($rule: TypeRuleSelector);
+    test($element: Element): boolean;
 }
 /**
  * Rule to test element tag name.

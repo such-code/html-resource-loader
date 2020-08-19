@@ -44,33 +44,30 @@ class WebpackLoader {
     }
 }
 exports.WebpackLoader = WebpackLoader;
-let CodeExecutor = /** @class */ (() => {
-    class CodeExecutor {
-        constructor(publicPath) {
-            this.publicPath = publicPath;
-        }
-        evaluateCode($context, $source, $fileName) {
-            if (!CodeExecutor.executionCache.hasOwnProperty($source)) {
-                const script = new vm.Script($source, {
-                    filename: $fileName,
-                    displayErrors: true,
-                });
-                const sandbox = vm.createContext({
-                    module: { exports: {} },
-                    __webpack_public_path__: this.publicPath,
-                });
-                script.runInContext(sandbox);
-                // Save to cache.
-                CodeExecutor.executionCache[$source] = sandbox['module'] && sandbox['module']['exports'];
-            }
-            // Return result from cache.
-            return CodeExecutor.executionCache[$source];
-        }
+class CodeExecutor {
+    constructor(publicPath) {
+        this.publicPath = publicPath;
     }
-    CodeExecutor.executionCache = {};
-    return CodeExecutor;
-})();
+    evaluateCode($context, $source, $fileName) {
+        if (!CodeExecutor.executionCache.hasOwnProperty($source)) {
+            const script = new vm.Script($source, {
+                filename: $fileName,
+                displayErrors: true,
+            });
+            const sandbox = vm.createContext({
+                module: { exports: {} },
+                __webpack_public_path__: this.publicPath,
+            });
+            script.runInContext(sandbox);
+            // Save to cache.
+            CodeExecutor.executionCache[$source] = sandbox['module'] && sandbox['module']['exports'];
+        }
+        // Return result from cache.
+        return CodeExecutor.executionCache[$source];
+    }
+}
 exports.CodeExecutor = CodeExecutor;
+CodeExecutor.executionCache = {};
 /**
  * Type guard to check if received loader options are HtmlResourceLoaderOptions.
  * @param $value
